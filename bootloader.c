@@ -121,15 +121,12 @@ int main()
 
 
 	/* Interrupt Vektoren verbiegen */
- 
-/*
 	char sregtemp = SREG;
 	cli();
 	temp = MCUCR;
 	MCUCR = temp | (1<<IVCE);
 	MCUCR = temp | (1<<IVSEL);
 	SREG = sregtemp;
- */
 
 
 	EIMSK = 1<<INT0;					// Enable INT0
@@ -160,6 +157,15 @@ int main()
 
 	while(1) {
 	        c = uart_getc();
+
+	        if( !(c & UART_NO_DATA) ) {
+			if((unsigned char)c == 'q') {
+                		uart_puts("Jumping to application\n\r");
+				_delay_ms(250);
+				start();
+			}
+		}
+
 
 		// Wait for data
 		if(! hasData) {
