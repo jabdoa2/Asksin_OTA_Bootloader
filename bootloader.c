@@ -14,6 +14,7 @@ uint8_t data[60];
 uint8_t hasData = 0;
 uint8_t hmid[3] = {0xAB, 0xCD, 0xEF};
 uint8_t flasher_hmid[3];
+uint16_t timeoutCounter = 0;
 
 char pHexChar(const uint8_t val) {
 	const char hexDigits[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
@@ -103,13 +104,38 @@ void send_ack(uint8_t *receiver, uint8_t messageId) {
 	sei();
 }
 
+void startApplication()
+{
+	void (*start)( void ) = 0x0000;        /* Funktionspointer auf 0x0000 */
+	unsigned char	temp;
+	/* vor Rücksprung eventuell benutzte Hardware deaktivieren
+	und Interrupts global deaktivieren, da kein "echter" Reset erfolgt */
+
+	/* Interrupt Vektoren wieder gerade biegen */
+	cli();
+	temp = MCUCR;
+	MCUCR = temp | (1<<IVCE);
+	MCUCR = temp & ~(1<<IVSEL);
+
+	/* Rücksprung zur Adresse 0x0000 */
+	start(); 
+}
+
+void startApplicationOnTimeout()
+{
+	if (timeoutCounter > 30000) { // wait about 10s
+		uart_puts("Timeout reached. Starting application!\n\r");
+		_delay_ms(250);
+		startApplication();
+	}
+}
+
 int main()
 {
 	unsigned int 	c=0;               /* Empfangenes Zeichen + Statuscode */
 	unsigned char	temp,              /* Variable */
 			flag=1,            /* Flag zum steuern der Endlosschleife */
 			p_mode=0;	   /* Flag zum steuern des Programmiermodus */
-	void (*start)( void ) = 0x0000;        /* Funktionspointer auf 0x0000 */
 
 	// Blink LED
 	DDRB = 0x01;  /* set pin 0 as output */
@@ -128,6 +154,11 @@ int main()
 	MCUCR = temp | (1<<IVSEL);
 	SREG = sregtemp;
 
+	// Timer 0 konfigurieren
+	TCCR0B |= (1<<CS01) | (!(1<<CS00)) | (!(1<<CS02));	//PRESCALER 8
+	TCNT0 = 0;
+	TIMSK0 |= (1<<TOIE0);
+
 
 	EIMSK = 1<<INT0;					// Enable INT0
 	EICRA = 1<<ISC01 | 0<<ISC00;			// falling edge
@@ -141,8 +172,8 @@ int main()
 	sei();
 	uart_puts("Sending bootloader sequence\n\r");
 
-	pHexChar((SPM_PAGESIZE >> 8) && 0xFF);
-	pHexChar(SPM_PAGESIZE & 0xFF);
+	//pHexChar((SPM_PAGESIZE >> 8) && 0xFF);
+	//pHexChar(SPM_PAGESIZE & 0xFF);
 
 	// Send this message: 14 00 00 10 23 25 B7 00 00 00 00 4B 45 51 30 37 33 34 31 31
 	// NAME: KUS0123456
@@ -162,10 +193,11 @@ int main()
 			if((unsigned char)c == 'q') {
                 		uart_puts("Jumping to application\n\r");
 				_delay_ms(250);
-				start();
+				startApplication();
 			}
 		}
 
+		startApplicationOnTimeout();
 
 		// Wait for data
 		if(! hasData) {
@@ -193,11 +225,14 @@ int main()
 	uart_puts("Switching to 100k mode\n\r");
 	cli();
 	init(1);
+	timeoutCounter = 0;
 	sei();
 
 	uint8_t mCnt = 0;
 	while(1) {
 	        c = uart_getc();
+
+		startApplicationOnTimeout();
 
 		// Wait for data
 		if(! hasData) {
@@ -223,6 +258,7 @@ int main()
 	uart_puts("Sending ack\n\r");
 	
 	send_ack(flasher_hmid, mCnt);
+	timeoutCounter = 0;
 
 	uart_puts("Start to receive firmware\n\r");
 
@@ -233,6 +269,8 @@ int main()
 	uint32_t pageCnt = 0;
 	while (1) {
 	        c = uart_getc();
+
+		startApplicationOnTimeout();
 
 		// Wait for data
 		if(! hasData) {
@@ -287,6 +325,7 @@ int main()
 				uart_puts("Got complete block!\n\r");
 				program_page(pageCnt, blockData);
 				pageCnt++;
+				timeoutCounter = 0;
 			}
 			//pHex(blockData, blockLen);
 			send_ack(flasher_hmid, data[1]);
@@ -294,68 +333,12 @@ int main()
 		}
 	}
 
-
-/*
-    do
-    {
-        c = uart_getc();
-        if( !(c & UART_NO_DATA) )
-        {
-            switch((unsigned char)c)
-            {
-                 case 'q': 
-		     flag=0;
-                     uart_puts("Verlasse den Bootloader!\n\r");
-                     break;
-                 case '0': 
-                     uart_puts("Going to 10k Mode\n\r");
-			cli();
-                     init(0);
-			sei();
-                     break;
-                 case '1': 
-                     uart_puts("Going to 100k Mode\n\r");
-			cli();
-                     init(1);
-			sei();
-                     break;
-
-
-                  default:
-                     uart_puts("Du hast folgendes Zeichen gesendet: ");
-                     uart_putc((unsigned char)c);
-                     uart_puts("\n\r");
-                     break;
-            }
-        }
-	if (hasData) {
-		hm_dec(data);
-
-
-//		if (data[7] == hmid[0] && data[8] == hmid[1] && data[9] == hmid[2]) {
-                	uart_puts("Got data: ");
-			pHex(data, data[0]+1);
-                	uart_puts("\n\r");
-//		}
-		hasData = 0;
-	}
-    }
-    while(flag);
- */
 	uart_puts("Springe zur Adresse 0x0000!\n\r");
 	_delay_ms(1000);
  
-	/* vor Rücksprung eventuell benutzte Hardware deaktivieren
-	und Interrupts global deaktivieren, da kein "echter" Reset erfolgt */
-
-	/* Interrupt Vektoren wieder gerade biegen */
-	cli();
-	temp = MCUCR;
-	MCUCR = temp | (1<<IVCE);
-	MCUCR = temp & ~(1<<IVSEL);
 
 	/* Rücksprung zur Adresse 0x0000 */
-	start(); 
+	startApplication(); 
 	return 0;
 }
 
@@ -366,4 +349,11 @@ ISR(INT0_vect) {
 		hasData = 1;
 	}
 	sei();
+}
+
+//INTERUPT
+ISR(TIMER0_OVF_vect) 
+{
+	TCNT0 = 0;
+	timeoutCounter++;
 }
