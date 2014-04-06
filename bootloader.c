@@ -265,6 +265,7 @@ int main()
 	uint16_t blockLen = 0;
 	uint16_t blockPos = 0;
 	uint32_t pageCnt = 0;
+	uint16_t expectedMsgId = data[1] + 1;
 	while (1) {
 	        c = uart_getc();
 
@@ -285,6 +286,20 @@ int main()
 		if (data[3] != 0xCA) {
                 	uart_puts("Got other message type\n\r");
 			continue;
+		}
+
+		if (data[1] != expectedMsgId) {
+			if (data[1] == expectedMsgId + 1 && pageCnt > 0) {
+				// The other side may have missed our ack. It will resend the last block
+				expectedMsgId--;
+				pageCnt--;
+				state = 0;
+				uart_puts("Retransmit. Will reflash!\n\r");
+			} else {
+				// We are in an invalid state now
+				state = 0;
+				uart_puts("FATAL: Wrong msgId detected!\n\r");
+			}
 		}
 
 		if (state == 0) {
@@ -324,6 +339,7 @@ int main()
 //				_delay_ms(100);
 				program_page(pageCnt * SPM_PAGESIZE, blockData);
 				pageCnt++;
+				expectedMsgId++;
 				timeoutCounter = 0;
 			}
 			//pHex(blockData, blockLen);
