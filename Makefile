@@ -19,4 +19,4 @@ testpayload:
 
 clean:
 	$(MAKE) -C ./uart/ clean
-	rm payload.hex payload.bin payload.eq3 payload.elf *.o
+	rm bootloader.hex bootloader.elf payload.hex payload.bin payload.eq3 payload.elf *.o
