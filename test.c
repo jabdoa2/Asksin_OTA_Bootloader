@@ -16,6 +16,55 @@ int main(void)
     PORTB &= ~0x01; /* switch pin 0 off */
     _delay_ms(250); /* wait */
     _delay_ms(250);
+    PORTB |= 0x01; /* switch pin 0 on */
+    _delay_ms(250); /* wait */
+    _delay_ms(250);
+    PORTB &= ~0x01; /* switch pin 0 off */
+    _delay_ms(250); /* wait */
+    _delay_ms(250);
+    PORTB |= 0x01; /* switch pin 0 on */
+    _delay_ms(250); /* wait */
+    _delay_ms(250);
+    PORTB &= ~0x01; /* switch pin 0 off */
+    _delay_ms(250); /* wait */
+    _delay_ms(250);
+    PORTB |= 0x01; /* switch pin 0 on */
+    _delay_ms(250); /* wait */
+    _delay_ms(250);
+    PORTB &= ~0x01; /* switch pin 0 off */
+    _delay_ms(250); /* wait */
+    _delay_ms(250);
+    PORTB |= 0x01; /* switch pin 0 on */
+    _delay_ms(250); /* wait */
+    _delay_ms(250);
+    PORTB &= ~0x01; /* switch pin 0 off */
+    _delay_ms(250); /* wait */
+    _delay_ms(250);
+    PORTB |= 0x01; /* switch pin 0 on */
+    _delay_ms(100); /* wait */
+    PORTB &= ~0x01; /* switch pin 0 off */
+    _delay_ms(100); /* wait */
+    PORTB |= 0x01; /* switch pin 0 on */
+    _delay_ms(100); /* wait */
+    PORTB &= ~0x01; /* switch pin 0 off */
+    _delay_ms(100); /* wait */
+    PORTB |= 0x01; /* switch pin 0 on */
+    _delay_ms(100); /* wait */
+    PORTB &= ~0x01; /* switch pin 0 off */
+    _delay_ms(100); /* wait */
+    PORTB |= 0x01; /* switch pin 0 on */
+    _delay_ms(100); /* wait */
+    PORTB &= ~0x01; /* switch pin 0 off */
+    _delay_ms(100); /* wait */
+    PORTB |= 0x01; /* switch pin 0 on */
+    _delay_ms(100); /* wait */
+    PORTB &= ~0x01; /* switch pin 0 off */
+    _delay_ms(100); /* wait */
+    PORTB |= 0x01; /* switch pin 0 on */
+    _delay_ms(100); /* wait */
+    PORTB &= ~0x01; /* switch pin 0 off */
+    _delay_ms(100); /* wait */
+
   } /* do it again */
 }
 
