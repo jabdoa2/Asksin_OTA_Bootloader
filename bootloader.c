@@ -6,7 +6,7 @@
 #include "cc.h"
 #include <string.h>
 
-#define BOOT_UART_BAUD_RATE     9600     /* Baudrate */
+#define BOOT_UART_BAUD_RATE     57600     /* Baudrate */
 #define XON                     17       /* XON Zeichen */
 #define XOFF                    19       /* XOFF Zeichen */
 
@@ -133,9 +133,7 @@ void startApplicationOnTimeout()
 int main()
 {
 	unsigned int 	c=0;               /* Empfangenes Zeichen + Statuscode */
-	unsigned char	temp,              /* Variable */
-			flag=1,            /* Flag zum steuern der Endlosschleife */
-			p_mode=0;	   /* Flag zum steuern des Programmiermodus */
+	unsigned char	temp;              /* Variable */
 
 	// Blink LED
 	DDRB = 0x01;  /* set pin 0 as output */
@@ -323,7 +321,8 @@ int main()
 				continue;
 			} else {
 				uart_puts("Got complete block!\n\r");
-				program_page(pageCnt, blockData);
+//				_delay_ms(100);
+				program_page(pageCnt * SPM_PAGESIZE, blockData);
 				pageCnt++;
 				timeoutCounter = 0;
 			}
@@ -333,6 +332,7 @@ int main()
 		}
 	}
 
+	// This is unreachable
 	uart_puts("Springe zur Adresse 0x0000!\n\r");
 	_delay_ms(1000);
  
