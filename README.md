@@ -25,7 +25,8 @@ avr-objcopy -j .text -j .data -O binary payload.elf payload.bin
 ```
 * Use the converter (need php-cli):
 ```
-php convert.php payload.bin payload.eq3
+php convert.php payload.bin payload.eq3 # convert to eq3 hex format
+tar -czf payload.tar.gz payload.eq3 # create .tar.gz for homematic windows tool
 ```
 * Open serial with 57600 baud to see debug output
 * Flash payload with flash-ota (from hmland https://git.zerfleddert.de/cgi-bin/gitweb.cgi/hmcfgusb):
