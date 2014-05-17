@@ -203,6 +203,15 @@ void wait_for_CB_msg()
 
 }
 
+void switch_radio_to_100k_mode()
+{
+	uart_puts("Switching to 100k mode\n\r");
+	cli();
+	init(1);
+	timeoutCounter = 0;
+	sei();
+}
+
 int main()
 {
 	unsigned char	temp;              /* Variable */
@@ -242,40 +251,9 @@ int main()
 
 	wait_for_CB_msg();
 
-	uart_puts("Switching to 100k mode\n\r");
-	cli();
-	init(1);
-	timeoutCounter = 0;
-	sei();
+	switch_radio_to_100k_mode();
 
-	while(1) {
-	        uart_getc();
-
-		startApplicationOnTimeout();
-
-		// Wait for data
-		if(! hasData) {
-			continue;
-		}
-
-		hm_dec(data);
-
-		hasData = 0;
-		if (data[7] != hmid[0] || data[8] != hmid[1] || data[9] != hmid[2]) {
-                	uart_puts("Got data but not for us\n\r");
-			continue;
-		}
-
-		/*
-		 * Wait for: 0F 08 20 CB 1A B1 50 AB CD EF 10 5B 11 F8 15 47
-		 */
-		if (data[3] == 0xCB) {
-                	uart_puts("Got message2 to start config\n\r");
-			send_ack_if_requested(data);
-			break;
-		}
-		send_nack_to_msg(data);
-	}
+	wait_for_CB_msg();
 	timeoutCounter = 0;
 
 	uart_puts("Start to receive firmware\n\r");
