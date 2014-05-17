@@ -98,10 +98,7 @@ void hm_dec(uint8_t *buffer) {
 
 void send_ack(uint8_t *receiver, uint8_t messageId) {
 	uint8_t ack_msg[11] = { 10, messageId, 0x80, 0x02, hmid[0], hmid[1], hmid[2], receiver[0], receiver[1], receiver[2], 0x00};
-	hm_enc(ack_msg);
-	cli();
-	sendData(ack_msg, 0);
-	sei();
+	send_hm_data(ack_msg);	
 }
 
 void startApplication()
@@ -128,6 +125,14 @@ void startApplicationOnTimeout()
 		_delay_ms(250);
 		startApplication();
 	}
+}
+
+void send_hm_data(uint8_t *msg)
+{
+	hm_enc(msg);
+	cli();
+	sendData(msg, 0);
+	sei();
 }
 
 int main()
@@ -163,25 +168,16 @@ int main()
 	/* Einstellen der Baudrate und aktivieren der Interrupts */
 	uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) ); 
  
-	_delay_ms(1000);
-
-
 	init(0);
 	sei();
 	uart_puts("Sending bootloader sequence\n\r");
 
-	//pHexChar((SPM_PAGESIZE >> 8) && 0xFF);
-	//pHexChar(SPM_PAGESIZE & 0xFF);
-
 	// Send this message: 14 00 00 10 23 25 B7 00 00 00 00 4B 45 51 30 37 33 34 31 31
-	// NAME: KUS0123456
+	// NAME: KEQ0123456
 	uint8_t msg[21] = {
 		0x14, 0x00, 0x00, 0x10, 0xAB, 0xCD, 0xEF, 0x00, 0x00, 0x00, 0x00, 0x4B, 0x45, 0x51, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36
 	};
-	hm_enc(msg);
-	cli();
-	sendData(msg, 0);
-	sei();
+	send_hm_data(msg);
 
 
 	while(1) {
