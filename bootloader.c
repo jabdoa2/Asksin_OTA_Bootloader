@@ -96,13 +96,41 @@ void hm_dec(uint8_t *buffer) {
         buffer[i] ^= buffer[2];
 }
 
+void send_hm_data(uint8_t *msg)
+{
+	hm_enc(msg);
+	cli();
+	sendData(msg, 0);
+	sei();
+}
+
 void send_ack(uint8_t *receiver, uint8_t messageId) {
 	uint8_t ack_msg[11] = { 10, messageId, 0x80, 0x02, hmid[0], hmid[1], hmid[2], receiver[0], receiver[1], receiver[2], 0x00};
 	send_hm_data(ack_msg);	
 }
 
-void startApplication()
-{
+void send_nack_to_msg(uint8_t *msg) {
+	uint8_t nack_msg[11] = { 10, msg[1], 0x80, 0x02, hmid[0], hmid[1], hmid[2], msg[4], msg[5], msg[6], 0x80};
+	send_hm_data(nack_msg);	
+}
+
+void send_ack_if_requested(uint8_t* msg) {
+	if (! (msg[2] & (1 << 5)))
+	{
+		// no ack requested
+		return;
+	}
+	uart_puts("Sending ack\n\r");
+	
+	// send ack to sender of msg
+	uint8_t ack_hmid[3];
+	ack_hmid[0] = msg[4];
+	ack_hmid[1] = msg[5];
+	ack_hmid[2] = msg[6];
+	send_ack(ack_hmid, msg[1]);
+}
+
+void startApplication() {
 	void (*start)( void ) = 0x0000;        /* Funktionspointer auf 0x0000 */
 	unsigned char	temp;
 	/* vor Rücksprung eventuell benutzte Hardware deaktivieren
@@ -127,17 +155,56 @@ void startApplicationOnTimeout()
 	}
 }
 
-void send_hm_data(uint8_t *msg)
+void send_bootloader_sequence()
 {
-	hm_enc(msg);
-	cli();
-	sendData(msg, 0);
-	sei();
+	uart_puts("Sending bootloader sequence\n\r");
+
+	// Send this message: 14 00 00 10 23 25 B7 00 00 00 00 4B 45 51 30 37 33 34 31 31
+	// NAME: KEQ0123456
+	uint8_t msg[21] = {
+		0x14, 0x00, 0x00, 0x10, 0xAB, 0xCD, 0xEF, 0x00, 0x00, 0x00, 0x00, 0x4B, 0x45, 0x51, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36
+	};
+	send_hm_data(msg);
+}
+
+void wait_for_CB_msg()
+{
+	while(1) {
+	        uart_getc();
+
+		startApplicationOnTimeout();
+
+		// Wait for data
+		if(! hasData) {
+			continue;
+		}
+		
+		hm_dec(data);
+
+		hasData = 0;
+		if (data[7] != hmid[0] || data[8] != hmid[1] || data[9] != hmid[2]) {
+                	uart_puts("Got data but not for us\n\r");
+			continue;
+		}
+
+		/*
+		 * Wait for: 0F 01 00 CB 1A B1 50 AB CD EF 10 5B 11 F8 15 47
+		 */
+		if (data[3] == 0xCB) {
+                	uart_puts("Got message to start config\n\r");
+			flasher_hmid[0] = data[4];
+			flasher_hmid[1] = data[5];
+			flasher_hmid[2] = data[6];
+			send_ack_if_requested(data);
+			break;
+		}
+		send_nack_to_msg(data);
+	}
+
 }
 
 int main()
 {
-	unsigned int 	c=0;               /* Empfangenes Zeichen + Statuscode */
 	unsigned char	temp;              /* Variable */
 
 	// Blink LED
@@ -170,61 +237,19 @@ int main()
  
 	init(0);
 	sei();
-	uart_puts("Sending bootloader sequence\n\r");
 
-	// Send this message: 14 00 00 10 23 25 B7 00 00 00 00 4B 45 51 30 37 33 34 31 31
-	// NAME: KEQ0123456
-	uint8_t msg[21] = {
-		0x14, 0x00, 0x00, 0x10, 0xAB, 0xCD, 0xEF, 0x00, 0x00, 0x00, 0x00, 0x4B, 0x45, 0x51, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36
-	};
-	send_hm_data(msg);
+	send_bootloader_sequence();
 
+	wait_for_CB_msg();
 
-	while(1) {
-	        c = uart_getc();
-
-	        if( !(c & UART_NO_DATA) ) {
-			if((unsigned char)c == 'q') {
-                		uart_puts("Jumping to application\n\r");
-				_delay_ms(250);
-				startApplication();
-			}
-		}
-
-		startApplicationOnTimeout();
-
-		// Wait for data
-		if(! hasData) {
-			continue;
-		}
-		
-		hm_dec(data);
-
-		hasData = 0;
-		if (data[7] != hmid[0] || data[8] != hmid[1] || data[9] != hmid[2]) {
-                	uart_puts("Got data but not for us\n\r");
-			continue;
-		}
-		/*
-		 * Wait for: 0F 01 00 CB 1A B1 50 AB CD EF 10 5B 11 F8 15 47
-		 */
-		if (data[3] == 0xCB) {
-                	uart_puts("Got message to start config\n\r");
-			flasher_hmid[0] = data[4];
-			flasher_hmid[1] = data[5];
-			flasher_hmid[2] = data[6];
-			break;
-		}
-	}
 	uart_puts("Switching to 100k mode\n\r");
 	cli();
 	init(1);
 	timeoutCounter = 0;
 	sei();
 
-	uint8_t mCnt = 0;
 	while(1) {
-	        c = uart_getc();
+	        uart_getc();
 
 		startApplicationOnTimeout();
 
@@ -240,18 +265,17 @@ int main()
                 	uart_puts("Got data but not for us\n\r");
 			continue;
 		}
+
 		/*
 		 * Wait for: 0F 08 20 CB 1A B1 50 AB CD EF 10 5B 11 F8 15 47
 		 */
 		if (data[3] == 0xCB) {
                 	uart_puts("Got message2 to start config\n\r");
-			mCnt = data[1];
+			send_ack_if_requested(data);
 			break;
 		}
+		send_nack_to_msg(data);
 	}
-	uart_puts("Sending ack\n\r");
-	
-	send_ack(flasher_hmid, mCnt);
 	timeoutCounter = 0;
 
 	uart_puts("Start to receive firmware\n\r");
@@ -263,7 +287,7 @@ int main()
 	uint32_t pageCnt = 0;
 	uint16_t expectedMsgId = data[1] + 1;
 	while (1) {
-	        c = uart_getc();
+	        uart_getc();
 
 		startApplicationOnTimeout();
 
@@ -343,15 +367,6 @@ int main()
 			state = 0;
 		}
 	}
-
-	// This is unreachable
-	uart_puts("Springe zur Adresse 0x0000!\n\r");
-	_delay_ms(1000);
- 
-
-	/* Rücksprung zur Adresse 0x0000 */
-	startApplication(); 
-	return 0;
 }
 
 
