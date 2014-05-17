@@ -146,6 +146,17 @@ void startApplication() {
 	start(); 
 }
 
+void setup_interrupts_for_bootloader() {
+	unsigned char	temp;              /* Variable */
+	/* Interrupt Vektoren verbiegen */
+	char sregtemp = SREG;
+	cli();
+	temp = MCUCR;
+	MCUCR = temp | (1<<IVCE);
+	MCUCR = temp | (1<<IVSEL);
+	SREG = sregtemp;
+}
+
 void startApplicationOnTimeout()
 {
 	if (timeoutCounter > 30000) { // wait about 10s
@@ -169,6 +180,8 @@ void send_bootloader_sequence()
 
 void wait_for_CB_msg()
 {
+	// reset timeout
+	timeoutCounter = 0;
 	while(1) {
 	        uart_getc();
 
@@ -208,52 +221,19 @@ void switch_radio_to_100k_mode()
 	uart_puts("Switching to 100k mode\n\r");
 	cli();
 	init(1);
-	timeoutCounter = 0;
 	sei();
 }
 
-int main()
+void switch_radio_to_10k_mode()
 {
-	unsigned char	temp;              /* Variable */
-
-	// Blink LED
-	DDRB = 0x01;  /* set pin 0 as output */
-	PORTB |= 0x01; /* switch pin 0 on */
-	_delay_ms(250); /* wait */
-	_delay_ms(250);
-	PORTB &= ~0x01; /* switch pin 0 off */
-
-
-
-	/* Interrupt Vektoren verbiegen */
-	char sregtemp = SREG;
+	uart_puts("Switching to 10k mode\n\r");
 	cli();
-	temp = MCUCR;
-	MCUCR = temp | (1<<IVCE);
-	MCUCR = temp | (1<<IVSEL);
-	SREG = sregtemp;
-
-	// Timer 0 konfigurieren
-	TCCR0B |= (1<<CS01) | (!(1<<CS00)) | (!(1<<CS02));	//PRESCALER 8
-	TCNT0 = 0;
-	TIMSK0 |= (1<<TOIE0);
-
-
-	EIMSK = 1<<INT0;					// Enable INT0
-	EICRA = 1<<ISC01 | 0<<ISC00;			// falling edge
-	/* Einstellen der Baudrate und aktivieren der Interrupts */
-	uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) ); 
- 
 	init(0);
 	sei();
+}
 
-	send_bootloader_sequence();
-
-	wait_for_CB_msg();
-
-	switch_radio_to_100k_mode();
-
-	wait_for_CB_msg();
+void flash_from_rf()
+{
 	timeoutCounter = 0;
 
 	uart_puts("Start to receive firmware\n\r");
@@ -345,6 +325,62 @@ int main()
 			state = 0;
 		}
 	}
+
+}
+
+void setup_timer() {
+	// Timer 0 konfigurieren
+	TCCR0B |= (1<<CS01) | (!(1<<CS00)) | (!(1<<CS02));	//PRESCALER 8
+	TCNT0 = 0;
+	TIMSK0 |= (1<<TOIE0);
+}
+
+void setup_cc1100_interrupts() {
+	EIMSK = 1<<INT0;					// Enable INT0
+	EICRA = 1<<ISC01 | 0<<ISC00;			// falling edge
+}
+
+int main()
+{
+	// Blink LED
+	DDRB = 0x01;  /* set pin 0 as output */
+	PORTB |= 0x01; /* switch pin 0 on */
+	_delay_ms(250); /* wait */
+	_delay_ms(250);
+	PORTB &= ~0x01; /* switch pin 0 off */
+
+	// map to correct interrupt table for bootloader
+	setup_interrupts_for_bootloader();
+
+	// setup timer for timeout counter
+	setup_timer();
+
+	// setup interrupts for cc1100
+	setup_cc1100_interrupts();
+
+	// init uart
+	uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) ); 
+
+	// Activate interrupts
+	sei();
+ 
+	// go to standard 10k mode
+	switch_radio_to_10k_mode();
+
+	// send broadcast to allow windows tool or flash_ota to discover device
+	send_bootloader_sequence();
+
+	// wait for msg in 10k mode to change to 100k mode
+	wait_for_CB_msg();
+
+	// switch to 100k mode
+	switch_radio_to_100k_mode();
+
+	// this is needed for windows tool
+	wait_for_CB_msg();
+
+	// run the actual flashing
+	flash_from_rf();
 }
 
 
