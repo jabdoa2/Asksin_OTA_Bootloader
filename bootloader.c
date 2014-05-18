@@ -180,6 +180,7 @@ void send_bootloader_sequence()
 
 void wait_for_CB_msg()
 {
+	uart_puts("Waiting for CB Message\n\r");
 	// reset timeout
 	timeoutCounter = 0;
 	while(1) {

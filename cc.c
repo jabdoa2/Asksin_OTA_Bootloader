@@ -61,40 +61,43 @@ void init(uint8_t mode100k) {		// initialize CC1101
 
 	SPCR = _BV(SPE) | _BV(MSTR);												// SPI speed = CLK/4
 
-	cc1101_Deselect();															// some deselect and selects to init the TRX868modul
-	delayMicroseconds(5);
+	cc1101_Deselect(); // some deselect and selects to init the TRX868modul
+	_delay_us(30);
 	cc1101_Select();	
-	delayMicroseconds(10);
+	_delay_us(30);
 	cc1101_Deselect();
-	delayMicroseconds(41);
+	_delay_us(45);
 
-	cmdStrobe(CC1101_SRES);														// send reset
-        delay(10);
+	cmdStrobe(CC1101_SRES);	// send reset
+	_delay_us(100);
 
 
-	for (uint8_t i=0; i<sizeof(initVal); i++) {		// write init value to TRX868
-		writeReg(pgm_read_byte(&initVal[i++]), pgm_read_byte(&initVal[i]));	
+	for (uint8_t i=0; i<sizeof(initVal); i += 2) {		// write init value to TRX868
+		writeReg(pgm_read_byte(&initVal[i]), pgm_read_byte(&initVal[i+1]));	
 	}
 	
 
 	if (mode100k) { // switch to 100k mode
-		for (uint8_t i=0; i<sizeof(initValUpdate); i++) {	// write init value to TRX868
-			writeReg(pgm_read_byte(&initValUpdate[i++]), pgm_read_byte(&initValUpdate[i]));	
+		for (uint8_t i=0; i<sizeof(initValUpdate); i += 2) {	// write init value to TRX868
+			writeReg(pgm_read_byte(&initValUpdate[i]), pgm_read_byte(&initValUpdate[i+1]));	
 		}
 
 
 	}
 
-	cmdStrobe(CC1101_SCAL);														// calibrate frequency synthesizer and turn it off
-	while (readReg(CC1101_MARcurStatTE, CC1101_STATUS) != 1) {						// waits until module gets ready
-		delayMicroseconds(1);
-	}
+	cmdStrobe(CC1101_SCAL);	// calibrate frequency synthesizer and turn it off
+	_delay_ms(4);
+
+
+	do {
+		cmdStrobe(CC1101_SRX);
+	} while (readReg(CC1101_MARcurStatTE, CC1101_STATUS) != 0x0D);
 	
+	writeReg(CC1101_PATABLE, PA_MaxPower); // configure PATABLE
+	cmdStrobe(CC1101_SRX); // flush the RX buffer
+	cmdStrobe(CC1101_SWORRST); // reset real time clock
 
-	writeReg(CC1101_PATABLE, PA_MaxPower);										// configure PATABLE
-	cmdStrobe(CC1101_SRX);														// flush the RX buffer
-	cmdStrobe(CC1101_SWORRST);													// reset real time clock
-
+	_delay_ms(3);
 }
 void sendData(uint8_t *buf, uint8_t burst) {								// send data packet via RF
 
