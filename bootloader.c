@@ -362,9 +362,6 @@ int main()
 	// init uart
 	uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) ); 
 
-	// Activate interrupts
-	sei();
- 
 	// go to standard 10k mode
 	switch_radio_to_10k_mode();
 
