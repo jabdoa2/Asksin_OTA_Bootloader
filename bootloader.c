@@ -9,6 +9,9 @@
 #define BOOT_UART_BAUD_RATE     57600     /* Baudrate */
 #define XON                     17       /* XON Zeichen */
 #define XOFF                    19       /* XOFF Zeichen */
+#define CODE_LEN				0xDEED   // at the end of the code, expect a CRC16 little endian
+//#define CRC_FLASH 1						// Enable CRC Check before application start. Requires firmware to include CRC checksum at the end.
+#define SERIAL_NUMBER			'K', 'E', 'Q', '0', '0', '0', '0', '0', '0', '1' // Serial Number used for flashing. Should be unique for each device to avoid flashing conflicts 
 
 uint8_t data[60];
 uint8_t hasData = 0;
@@ -130,6 +133,51 @@ void send_ack_if_requested(uint8_t* msg) {
 	send_ack(ack_hmid, msg[1]);
 }
 
+#ifdef CRC_FLASH 
+
+// function to update CRC with additional byte. based on
+// http://www.avrfreaks.net/index.php?name=PNphpBB2&file=printview&t=127852&start=0
+static uint16_t updcrc(uint8_t c, uint16_t crc) 
+{ 
+   uint8_t flag; 
+   for (uint8_t i = 0; i < 8; ++i) 
+   { 
+      flag = !!(crc & 0x8000); 
+      crc <<= 1; 
+      if (c & 0x80) 
+         crc |= 1; 
+      if (flag) 
+         crc ^= 0x1021; 
+      c <<= 1; 
+   } 
+   return crc; 
+} 
+
+//read through program memory for defined CODE_LEN and calculate CRC, then compare with CRC stored at the end of CODE_LEN
+uint8_t crc_app_ok(void) { 
+   uint16_t crc = 0xFFFF; 
+   for (uint16_t i=0; i < CODE_LEN; i++) { 
+	  crc = updcrc(pgm_read_byte(i), crc);
+	  } 
+   // augment 
+   crc = updcrc(0, updcrc(0, crc));  
+   return (pgm_read_word(CODE_LEN) == crc); 
+} 
+
+// do a Reset if CRC check fails, so that Bootloader is ready to receive new firmware
+void resetOnCRCFail(){
+	if(crc_app_ok()){
+		uart_puts("CRC check OK\r\n");
+		_delay_ms(250);
+		return;
+	}
+	wdt_reset();
+	uart_puts("CRC check failed: Reboot\r\n");
+    wdt_enable(WDTO_1S);
+	while(1); // wait for Watchdog to generate reset
+}
+#endif 
+
 void startApplication() {
 	void (*start)( void ) = 0x0000;        /* Funktionspointer auf 0x0000 */
 	unsigned char	temp;
@@ -162,6 +210,9 @@ void startApplicationOnTimeout()
 	if (timeoutCounter > 30000) { // wait about 10s
 		uart_puts("Timeout reached. Starting application!\n\r");
 		_delay_ms(250);
+		#ifdef CRC_FLASH    // if CRC-Check is enabled, check CRC checksum before application start
+			resetOnCRCFail();
+		#endif
 		startApplication();
 	}
 }
@@ -170,10 +221,10 @@ void send_bootloader_sequence()
 {
 	uart_puts("Sending bootloader sequence\n\r");
 
-	// Send this message: 14 00 00 10 23 25 B7 00 00 00 00 4B 45 51 30 37 33 34 31 31
-	// NAME: KEQ0123456
+	// Send this message: 14 00 00 10 23 25 B7 00 00 00 00 SERIAL_NUMBER
+	
 	uint8_t msg[21] = {
-		0x14, 0x00, 0x00, 0x10, 0xAB, 0xCD, 0xEF, 0x00, 0x00, 0x00, 0x00, 0x4B, 0x45, 0x51, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36
+		0x14, 0x00, 0x00, 0x10, 0xAB, 0xCD, 0xEF, 0x00, 0x00, 0x00, 0x00, SERIAL_NUMBER
 	};
 	send_hm_data(msg);
 }
@@ -343,6 +394,11 @@ void setup_cc1100_interrupts() {
 
 int main()
 {
+	// disable watchdog (used for software reset the device)
+	MCUSR=0;
+	wdt_reset();
+	wdt_disable();
+
 	// Blink LED
 	DDRB = 0x01;  /* set pin 0 as output */
 	PORTB |= 0x01; /* switch pin 0 on */
