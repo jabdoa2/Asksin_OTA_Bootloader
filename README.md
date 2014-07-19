@@ -29,7 +29,7 @@ avr-objcopy -j .text -j .data -O binary payload.elf payload.bin
 * This CRC Checksum has to be added with the tool srec_cat (from srecord: http://srecord.sourceforge.net/download.html)
 * In this case, do not use avr-objcopy, simply run srec_cat as follows (use the .hex file as input, not the .elf file)
 ```
-srec_cat <payload.hex> -intel -fill 0xFF 0x0000 0x6FFE -Cyclic_Redundancy_Check_16_Little_Endian 0x6FFE -o payload.bin -binary
+srec_cat <payload.hex> -intel -fill 0xFF 0x0000 0xDEED -Cyclic_Redundancy_Check_16_Little_Endian 0xDEED -o payload.bin -binary
 ```
 * in both cases you end up with the binary, which has to go through the converter to get the EQ3 format
 * Use the converter (need php-cli):
