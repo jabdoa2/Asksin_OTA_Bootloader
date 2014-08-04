@@ -9,10 +9,16 @@
 #include <util/delay.h>
 
 
-const static uint8_t SS   = 4;
-const static uint8_t MOSI = 5;
-const static uint8_t MISO = 6;
-const static uint8_t SCK  = 7;
+//const static uint8_t SS   = 4;
+//const static uint8_t MOSI = 5;
+//const static uint8_t MISO = 6;
+//const static uint8_t SCK  = 7;
+
+// Pin Assigment for Atmega328p (Univarsalsensor)
+const static uint8_t SS   = 2;
+const static uint8_t MOSI = 3;
+const static uint8_t MISO = 4;
+const static uint8_t SCK  = 5;
 
 #define HIGH 0x1
 #define LOW  0x0
@@ -22,10 +28,15 @@ const static uint8_t SCK  = 7;
 #define INPUT_PULLUP 0x2
 
 #define PORT_SPI_MISO            PINB
-#define BIT_SPI_MISO             6
 #define PORT_SPI_SS              PORTB
-#define BIT_SPI_SS               4
-#define GDO0                     2
+//#define BIT_SPI_MISO             6
+//#define BIT_SPI_SS               4
+//#define GDO0                     2
+
+// Pin Assigment for Atmega328p (Univarsalsensor)
+#define BIT_SPI_MISO             4
+#define BIT_SPI_SS               2
+#define GDO0                     10
 
 #define CC1101_DATA_LEN			 60
 

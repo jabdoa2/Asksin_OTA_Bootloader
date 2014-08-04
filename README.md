@@ -1,7 +1,7 @@
 Bidcos Bootloader for Atmega
 ======================
 
-Currently only Atmega 644 is supported. Tested on HM\-LC\-Sw1PBU\-FM (https://github.com/jabdoa2/Asksin_HM_LC_Sw1PBU_FM).
+This version is modifyed for working with the Atmega328p at the universal sensor board
 
 Prepare device:
 * Clone repository
@@ -11,11 +11,11 @@ make
 ```
 * Write fuses:
 ```
-avrdude -p m644 -P usb -c usbasp -U lfuse:w:0xFD:m -U hfuse:w:0xD8:m
+avrdude -p m328p -P usb -c usbasp -U lfuse:w:0xE2:m -U hfuse:w:0xD0:m
 ```
 * Flash to device:
 ```
-avrdude -p m644 -P usb -c usbasp -V -U flash:w:bootloader.hex
+avrdude -p m328p -P usb -c usbasp -V -U flash:w:bootloader.hex
 ```
 
 Convert payload and flash:

@@ -10,7 +10,7 @@
 const uint16_t PROGMEM port_to_mode_PGM[] =
 {
         NOT_A_PORT,
-        (uint16_t) &DDRA,
+        NOT_A_PORT, 
         (uint16_t) &DDRB,
         (uint16_t) &DDRC,
         (uint16_t) &DDRD,
@@ -19,7 +19,7 @@ const uint16_t PROGMEM port_to_mode_PGM[] =
 const uint16_t PROGMEM port_to_output_PGM[] =
 {
         NOT_A_PORT,
-        (uint16_t) &PORTA,
+         NOT_A_PORT,
         (uint16_t) &PORTB,
         (uint16_t) &PORTC,
         (uint16_t) &PORTD,

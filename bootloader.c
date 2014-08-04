@@ -9,9 +9,9 @@
 #define BOOT_UART_BAUD_RATE     57600     /* Baudrate */
 #define XON                     17       /* XON Zeichen */
 #define XOFF                    19       /* XOFF Zeichen */
-#define CODE_LEN				0xDEED   // at the end of the code, expect a CRC16 little endian
-//#define CRC_FLASH 1						// Enable CRC Check before application start. Requires firmware to include CRC checksum at the end.
-#define SERIAL_NUMBER			'K', 'E', 'Q', '0', '0', '0', '0', '0', '0', '1' // Serial Number used for flashing. Should be unique for each device to avoid flashing conflicts 
+#define CODE_LEN                0xDEED   // at the end of the code, expect a CRC16 little endian
+//#define CRC_FLASH 1                    // Enable CRC Check before application start. Requires firmware to include CRC checksum at the end.
+#define SERIAL_NUMBER          'S', 'E', 'N', '0', 'T', 'H', 'P', 'L', '0', '2' // Serial Number used for flashing. Should be unique for each device to avoid flashing conflicts
 
 uint8_t data[60];
 uint8_t hasData = 0;
@@ -123,7 +123,7 @@ void send_ack_if_requested(uint8_t* msg) {
 		// no ack requested
 		return;
 	}
-	uart_puts("Sending ack\n\r");
+	uart_puts("S: ack\n\r");
 	
 	// send ack to sender of msg
 	uint8_t ack_hmid[3];
@@ -167,12 +167,12 @@ uint8_t crc_app_ok(void) {
 // do a Reset if CRC check fails, so that Bootloader is ready to receive new firmware
 void resetOnCRCFail(){
 	if(crc_app_ok()){
-		uart_puts("CRC check OK\r\n");
+		uart_puts("CRC OK\r\n");
 		_delay_ms(250);
 		return;
 	}
 	wdt_reset();
-	uart_puts("CRC check failed: Reboot\r\n");
+	uart_puts("CRC fail: Reboot\r\n");
     wdt_enable(WDTO_1S);
 	while(1); // wait for Watchdog to generate reset
 }
@@ -208,7 +208,7 @@ void setup_interrupts_for_bootloader() {
 void startApplicationOnTimeout()
 {
 	if (timeoutCounter > 30000) { // wait about 10s
-		uart_puts("Timeout reached. Starting application!\n\r");
+		uart_puts("Timeout. Start program!\n\r");
 		_delay_ms(250);
 		#ifdef CRC_FLASH    // if CRC-Check is enabled, check CRC checksum before application start
 			resetOnCRCFail();
@@ -219,7 +219,7 @@ void startApplicationOnTimeout()
 
 void send_bootloader_sequence()
 {
-	uart_puts("Sending bootloader sequence\n\r");
+	uart_puts("S: bootloader sequence\n\r");
 
 	// Send this message: 14 00 00 10 23 25 B7 00 00 00 00 SERIAL_NUMBER
 	
@@ -231,11 +231,11 @@ void send_bootloader_sequence()
 
 void wait_for_CB_msg()
 {
-	uart_puts("Waiting for CB Message\n\r");
+	uart_puts("Wait for CB Msg\n\r");
 	// reset timeout
 	timeoutCounter = 0;
 	while(1) {
-	        uart_getc();
+		uart_getc();
 
 		startApplicationOnTimeout();
 
@@ -248,7 +248,7 @@ void wait_for_CB_msg()
 
 		hasData = 0;
 		if (data[7] != hmid[0] || data[8] != hmid[1] || data[9] != hmid[2]) {
-                	uart_puts("Got data but not for us\n\r");
+			uart_puts("Got data, not for us\n\r");
 			continue;
 		}
 
@@ -256,7 +256,7 @@ void wait_for_CB_msg()
 		 * Wait for: 0F 01 00 CB 1A B1 50 AB CD EF 10 5B 11 F8 15 47
 		 */
 		if (data[3] == 0xCB) {
-                	uart_puts("Got message to start config\n\r");
+			uart_puts("Got message to start config\n\r");
 			flasher_hmid[0] = data[4];
 			flasher_hmid[1] = data[5];
 			flasher_hmid[2] = data[6];
@@ -270,7 +270,7 @@ void wait_for_CB_msg()
 
 void switch_radio_to_100k_mode()
 {
-	uart_puts("Switching to 100k mode\n\r");
+	uart_puts("Switch to 100k\n\r");
 	cli();
 	init(1);
 	sei();
@@ -278,7 +278,7 @@ void switch_radio_to_100k_mode()
 
 void switch_radio_to_10k_mode()
 {
-	uart_puts("Switching to 10k mode\n\r");
+	uart_puts("Switch to 10k\n\r");
 	cli();
 	init(0);
 	sei();
@@ -288,7 +288,7 @@ void flash_from_rf()
 {
 	timeoutCounter = 0;
 
-	uart_puts("Start to receive firmware\n\r");
+	uart_puts("Start receive firmware\n\r");
 
 	uint8_t state = 0; // 0 = block has not started yet, 1 = block started
 	uint8_t blockData[SPM_PAGESIZE];
@@ -310,7 +310,7 @@ void flash_from_rf()
 
 		hasData = 0;
 		if (data[7] != hmid[0] || data[8] != hmid[1] || data[9] != hmid[2]) {
-                	uart_puts("Got data but not for us\n\r");
+			uart_puts("Got data, not for us\n\r");
 			continue;
 		}
 		if (data[3] != 0xCA) {
@@ -392,6 +392,13 @@ void setup_cc1100_interrupts() {
 	EICRA = 1<<ISC01 | 0<<ISC00;			// falling edge
 }
 
+void blinkLED() {
+	PORTD |= 0x10; /* switch pin 0 on */
+	_delay_ms(250); /* wait */
+	PORTD &= ~0x10; /* switch pin 0 off */
+	_delay_ms(250); /* wait */
+}
+
 int main()
 {
 	// disable watchdog (used for software reset the device)
@@ -400,11 +407,8 @@ int main()
 	wdt_disable();
 
 	// Blink LED
-	DDRB = 0x01;  /* set pin 0 as output */
-	PORTB |= 0x01; /* switch pin 0 on */
-	_delay_ms(250); /* wait */
-	_delay_ms(250);
-	PORTB &= ~0x01; /* switch pin 0 off */
+	DDRD = 0x10;  /* set pin 4 as output */
+	blinkLED();
 
 	// map to correct interrupt table for bootloader
 	setup_interrupts_for_bootloader();
@@ -416,10 +420,14 @@ int main()
 	setup_cc1100_interrupts();
 
 	// init uart
-	uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) ); 
+	uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) );
+
+	// enable interrupts for UART lib
+	sei();
 
 	// go to standard 10k mode
 	switch_radio_to_10k_mode();
+	blinkLED();
 
 	// send broadcast to allow windows tool or flash_ota to discover device
 	send_bootloader_sequence();
@@ -436,7 +444,6 @@ int main()
 	// run the actual flashing
 	flash_from_rf();
 }
-
 
 ISR(INT0_vect) {
 	cli();

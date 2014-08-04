@@ -2,7 +2,8 @@
 $inFile = $_SERVER['argv'][1];
 $outFile = $_SERVER['argv'][2];
 $f = fopen($inFile, "r");
-$spm_pagesize = 256;
+#$spm_pagesize = 256;
+$spm_pagesize = 128; // for atmega328p
 
 $out = "";
 while(!feof($f)) {
