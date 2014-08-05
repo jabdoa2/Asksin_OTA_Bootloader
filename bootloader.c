@@ -1,12 +1,31 @@
 #include "bootloader.h"
 
-//#define DEBUG
-
+//#define DEBUG 1
 #ifdef DEBUG
 	#define BOOT_UART_BAUD_RATE 57600     // Baudrate
 #endif
 
 #define CRC_FLASH 1                       // Enable CRC Check before application start. Requires firmware to include CRC checksum at the end.
+#ifdef CRC_FLASH
+	//#define CODE_LEN                0xDEED   // at the end of the code, expect a CRC16 little endian
+	// codelen for Atmega328p
+	#define CODE_LEN                0x6FFE   // at the end of the code, expect a CRC16 little endian
+#endif
+
+/* ---------------------------------------------------------- */
+/*               address data section                         */
+/*               stored at 0x7FF0 in boot loader space        */
+/* ---------------------------------------------------------- */
+#define ADDRESS_SECTION __attribute__ ((section (".addressData")))
+const char deviceType[] ADDRESS_SECTION = {
+	0xF1, 0x01                                         // The model-ID    0xF1 0x01 = DIY (HB-UW-Sen-THPL-I)
+};
+const char serialNumber[] ADDRESS_SECTION = {
+	'H','B','0','D','e','f','a','u','l','t'            // 0x7FF2: 10 bytes serial number
+};
+const char address[] ADDRESS_SECTION = {
+	0xAB, 0xCD, 0xEF,                                  // 0x7FFC: 3 bytes device address (hmid for the application not the hmid for bootloader!!!)
+};
 
 #define SERIAL_NUMBER 'S', 'E', 'N', '0', 'T', 'H', 'P', 'L', '0', '2' // Serial Number used for flashing. Should be unique for each device to avoid flashing conflicts
 
@@ -233,8 +252,9 @@ void send_bootloader_sequence() {
 		uart_puts("S: bootloader sequence\n\r");
 	#endif
 
-	// Send this message: 14 00 00 10 23 25 B7 00 00 00 00 SERIAL_NUMBER
+	// Send this message: 14 00 00 10 23 25 B7 00 00 00 00 serialNumber
 	uint8_t msg[21] = {
+//		0x14, 0x00, 0x00, 0x10, 0xAB, 0xCD, 0xEF, 0x00, 0x00, 0x00, 0x00, *serialNumber
 		0x14, 0x00, 0x00, 0x10, 0xAB, 0xCD, 0xEF, 0x00, 0x00, 0x00, 0x00, SERIAL_NUMBER
 	};
 	send_hm_data(msg);
