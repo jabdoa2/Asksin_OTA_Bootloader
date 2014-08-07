@@ -1,5 +1,4 @@
 #include "cc.h"
-#include "arduino.h"
 
 const PROGMEM const uint8_t initVal[] = {									// define init settings for TRX868
 	0x00, 0x2E,			// IOCFG2: tristate									// non inverted GDO2, high impedance tri state
@@ -47,70 +46,80 @@ const uint8_t PROGMEM initValUpdate[] = {
 	0x23, 0xEA,
 };
 
-void init(uint8_t mode100k) {		// initialize CC1101
-	pinMode(SS, OUTPUT);														// set pins for SPI communication
-	pinMode(MOSI, OUTPUT);
-	pinMode(MISO, INPUT);
-	pinMode(SCK, OUTPUT);
-	pinMode(GDO0, INPUT);														// config GDO0 as input
+/*
+ * initialize CC1101
+ */
+void init(uint8_t mode100k) {
+	bitSet(DDR_SPI, PIN_SPI_SS);												// set B2(SS) as Output
+	bitSet(DDR_SPI, PIN_SPI_MOSI);												// set B3(MOSI) as Output
+	bitClear(DDR_SPI, PIN_SPI_MISO);											// set B4(MISO) as Input
+	bitSet(DDR_SPI, PIN_SPI_SCK);												// set B5(SCK) as Output
 
-	digitalWrite(SS, HIGH);														// SPI init
-	digitalWrite(SCK, HIGH);
-	digitalWrite(MOSI, LOW);
+	bitClear(DDR_GDO0, PIN_GDO0);												// set B2(SS) as Input
+
+	bitSet(PORT_SPI, PIN_SPI_SS);												// set SS high
+	bitSet(PORT_SPI, PIN_SPI_SCK);												// set SCK high
+	bitClear(PORT_SPI, PIN_SPI_MOSI);											// set MOSI high
 
 	SPCR = _BV(SPE) | _BV(MSTR);												// SPI speed = CLK/4
 
-	cc1101_Deselect(); // some deselect and selects to init the TRX868modul
+	cc1101_Deselect();															// some deselect and selects to init the TRX868modul
 	_delay_us(30);
+
 	cc1101_Select();	
 	_delay_us(30);
+
 	cc1101_Deselect();
 	_delay_us(45);
 
-	cmdStrobe(CC1101_SRES);	// send reset
+	cmdStrobe(CC1101_SRES);														// send reset
 	_delay_us(100);
 
-	for (uint8_t i=0; i<sizeof(initVal); i += 2) {		// write init value to TRX868
+	for (uint8_t i=0; i<sizeof(initVal); i += 2) {								// write init value to TRX868
 		writeReg(pgm_read_byte(&initVal[i]), pgm_read_byte(&initVal[i+1]));	
 	}
 
-	if (mode100k) { // switch to 100k mode
-		for (uint8_t i=0; i<sizeof(initValUpdate); i += 2) {	// write init value to TRX868
+	if (mode100k) {																// switch to 100k mode
+		for (uint8_t i=0; i<sizeof(initValUpdate); i += 2) {					// write init value to TRX868
 			writeReg(pgm_read_byte(&initValUpdate[i]), pgm_read_byte(&initValUpdate[i+1]));	
 		}
 	}
 
-	cmdStrobe(CC1101_SCAL);	// calibrate frequency synthesizer and turn it off
+	cmdStrobe(CC1101_SCAL);														// calibrate frequency synthesizer and turn it off
 	_delay_ms(4);
 
 	do {
 		cmdStrobe(CC1101_SRX);
 	} while (readReg(CC1101_MARcurStatTE, CC1101_STATUS) != 0x0D);
 	
-	writeReg(CC1101_PATABLE, PA_MaxPower); // configure PATABLE
-	cmdStrobe(CC1101_SRX); // flush the RX buffer
-	cmdStrobe(CC1101_SWORRST); // reset real time clock
+	writeReg(CC1101_PATABLE, PA_MaxPower);										// configure PATABLE
+	cmdStrobe(CC1101_SRX);														// flush the RX buffer
+	cmdStrobe(CC1101_SWORRST);													// reset real time clock
 
 	_delay_ms(3);
 }
 
 void sendData(uint8_t *buf, uint8_t burst) {									// send data packet via RF
 
-	// Going from RX to TX does not work if there was a reception less than 0.5
-	// sec ago. Due to CCA? Using IDLE helps to shorten this period(?)
-	//ccStrobe(CC1100_SIDLE);
-	//uint8_t cnt = 0xff;
-	//while(cnt-- && (ccStrobe( CC1100_STX ) & 0x70) != 2)
-	//my_delay_us(10);
+	/**
+	 * Going from RX to TX does not work if there was a reception less than 0.5
+	 * sec ago. Due to CCA? Using IDLE helps to shorten this period(?)
+	 * ccStrobe(CC1100_SIDLE);
+	 * uint8_t cnt = 0xff;
+	 * while(cnt-- && (ccStrobe( CC1100_STX ) & 0x70) != 2)
+	 * my_delay_us(10);
+	 */
+
  	cmdStrobe(CC1101_SIDLE);													// go to idle mode
 	cmdStrobe(CC1101_SFRX );													// flush RX buffer
 	cmdStrobe(CC1101_SFTX );													// flush TX buffer
 	
 	if (burst) {																// BURST-bit set?
 		cmdStrobe(CC1101_STX  );												// send a burst
-		delay(360);																// according to ELV, devices get activated every 300ms, so send burst for 360ms
+		_delay_ms(200);														// according to ELV, devices get activated every 300ms, so send burst for 360ms
+		_delay_ms(160);
 	} else {
-		delay(1);																// wait a short time to set TX mode
+		_delay_ms(1);															// wait a short time to set TX mode
 	}
 
 	writeBurst(CC1101_TXFIFO, buf, buf[0]+1);									// write in TX FIFO
@@ -125,12 +134,8 @@ void sendData(uint8_t *buf, uint8_t burst) {									// send data packet via RF
 			break;																//neither in RX nor TX, probably some error
 		}
 
-		delayMicroseconds(10);
+		_delay_us(10);
 	}
-
-	//uint8_t cnt = 0xff;
-	//while(cnt-- && (sendSPI(CC1101_SRX) & 0x70) != 1)
-	//delayMicroseconds(10);
 }
 
 uint8_t receiveData(uint8_t *buf) {												// read data packet from RX FIFO
@@ -161,35 +166,37 @@ uint8_t receiveData(uint8_t *buf) {												// read data packet from RX FIFO
 }
 
 uint8_t detectBurst(void) {														// wake up CC1101 from power down state
-	// 10 7/10 5 in front of the received string; 33 after received string
-	// 10 - 00001010 - sync word found
-	// 7  - 00000111 - GDO0 = 1, GDO2 = 1
-	// 5  - 00000101 - GDO0 = 1, GDO2 = 1
-	// 33 - 00100001 - GDO0 = 1, preamble quality reached
-	// 96 - 01100000 - burst sent
-	// 48 - 00110000 - in receive mode
-	//
-	// Status byte table:
-	//	0 current GDO0 value
-	//	1 reserved
-	//	2 GDO2
-	//	3 sync word found
-	//	4 channel is clear
-	//	5 preamble quality reached
-	//	6 carrier sense
-	//	7 CRC ok
-	//
-	// possible solution for finding a burst is to check for bit 6, carrier sense
+	/*
+	 * 10 7/10 5 in front of the received string; 33 after received string
+	 * 10 - 00001010 - sync word found
+	 * 7  - 00000111 - GDO0 = 1, GDO2 = 1
+	 * 5  - 00000101 - GDO0 = 1, GDO2 = 1
+	 * 33 - 00100001 - GDO0 = 1, preamble quality reached
+	 * 96 - 01100000 - burst sent
+	 * 48 - 00110000 - in receive mode
+	 *
+	 * Status byte table:
+	 *  0 current GDO0 value
+	 *  1 reserved
+	 *  2 GDO2
+	 *  3 sync word found
+	 *  4 channel is clear
+	 *  5 preamble quality reached
+	 *  6 carrier sense
+	 *  7 CRC ok
+	 *
+	 * possible solution for finding a burst is to check for bit 6, carrier sense
 
-	// set RXTX module in receive mode
+	 * set RXTX module in receive mode
+	 */
 	cc1101_Select();															// select CC1101
 	wait_Miso();																// wait until MISO goes low
 	cc1101_Deselect();															// deselect CC1101
 	cmdStrobe(CC1101_SRX);														// set RX mode again
-	delay(3);																	// wait a short time to set RX mode
+	_delay_ms(3);																// wait a short time to set RX mode
 	
 	// todo: check carrier sense for 5ms to avoid wakeup due to normal transmition
-	return bitRead(monitorStatus(),6);									// return the detected signal
+	return bitRead(monitorStatus(),6);											// return the detected signal
 }
 
 void setPowerDownxtStatte() {													// put CC1101 into power-down state
