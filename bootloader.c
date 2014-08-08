@@ -256,7 +256,7 @@ void send_bootloader_sequence() {
 	 * Send this message: 14 00 00 10 23 25 B7 00 00 00 00 serialNumber
 	 */
 	uint8_t msg[21] = {
-		0x14, 0x00, 0x00, 0x10, 0xAB, 0xCD, 0xEF, 0x00, 0x00, 0x00, 0x00, HM_SERIAL
+		0x14, 0x00, 0x00, 0x10, HM_ID, 0x00, 0x00, 0x00, 0x00, HM_SERIAL
 	};
 
 	send_hm_data(msg);
@@ -454,7 +454,7 @@ void flash_from_rf() {
 				timeoutCounter = 0;
 
 				#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
-					bitClear(PORT_STATUSLED, PIN_STATUSLED);						// Status-LED off, we blinking
+					bitClear(PORT_STATUSLED, PIN_STATUSLED);					// Status-LED off, we blinking
 				#endif
 			}
 

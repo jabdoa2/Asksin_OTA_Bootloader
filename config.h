@@ -27,13 +27,11 @@
 // adress of CRC checksum if CRC check is enabled. See below. Expect a CRC16 little endian
 #define CODE_LEN             0x6FFE
 
-
 /*****************************************
  *        Address data section           *
  * Stored at 0x7FF0 in boot loader space *
  *           See Makefile                *
  *****************************************/
-
 #define USE_ADRESS_SECTION   1
 
 // The model type
@@ -43,5 +41,4 @@
 //#define HM_SERIAL            'H','B','0','D','e','f','a','u','l','t'			// stored at 0x7FF2
 #define HM_SERIAL            'S','E','N','0','T','H','P','L','0','2'
 
-#define HM_ID                0xAB, 0xCD, 0xEF									// stored at 0x7FFC
-//#define HM_ID                0xAB, 0xCD, 0xEF
+#define HM_ID                0x1A, 0xCA, 0xE5									// stored at 0x7FFC
