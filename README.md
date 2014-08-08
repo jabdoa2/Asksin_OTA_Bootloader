@@ -10,8 +10,11 @@ Prepare device:
 make
 ```
 * Write fuses:
+* We set lock Bits for bootloader section mode 2 (SPM prohibited), so the bootloader can't write his self.
+* LPM must allowed, so we store the adress data of the device in the bootloader section and the application
+* must can read the bootloader section.
 ```
-avrdude -p m328p -P usb -c usbasp -U lfuse:w:0xE2:m -U hfuse:w:0xD0:m
+avrdude -p m328p -P usb -c usbasp -U lfuse:w:0xE2:m -U hfuse:w:0xD0:m -U lock:w:0x2F:m
 ```
 * Flash to device:
 ```
