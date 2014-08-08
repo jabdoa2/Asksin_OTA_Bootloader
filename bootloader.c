@@ -119,7 +119,7 @@ void send_ack_if_requested(uint8_t* msg) {
 	}
 	
 	#if DEBUG == 1
-		uart_puts("S: ack\n\r");
+		uart_puts("S: ack\n");
 	#endif
 
 	// send ack to sender of msg
@@ -232,7 +232,7 @@ void setup_interrupts_for_bootloader() {
 void startApplicationOnTimeout() {
 	if (timeoutCounter > 30000) {												// wait about 10s at 8Mhz
 		#if DEBUG == 1
-			uart_puts("Timeout. Start program!\n\r");
+			uart_puts("Timeout. Start program!\n");
 			_delay_ms(250);
 		#endif
 
@@ -249,7 +249,7 @@ void startApplicationOnTimeout() {
 
 void send_bootloader_sequence() {
 	#if DEBUG == 1
-		uart_puts("S: bootloader sequence\n\r");
+		uart_puts("S: bootloader sequence\n");
 	#endif
 
 	/*
@@ -266,7 +266,7 @@ void send_bootloader_sequence() {
 
 void wait_for_CB_msg() {
 	#if DEBUG == 1
-		uart_puts("Wait for CB Msg\n\r");
+		uart_puts("Wait for CB Msg\n");
 	#endif
 
 	timeoutCounter = 0;															// reset timeout
@@ -286,7 +286,7 @@ void wait_for_CB_msg() {
 		hasData = 0;
 		if (data[7] != hmid[0] || data[8] != hmid[1] || data[9] != hmid[2]) {
 			#if DEBUG == 1
-				uart_puts("Got data, not for us\n\r");
+				uart_puts("Got data, not for us\n");
 			#endif
 
 			continue;
@@ -297,7 +297,7 @@ void wait_for_CB_msg() {
 		 */
 		if (data[3] == 0xCB) {
 			#if DEBUG == 1
-				uart_puts("Got message to start config\n\r");
+				uart_puts("Got message to start config\n");
 			#endif
 
 			flasher_hmid[0] = data[4];
@@ -313,7 +313,7 @@ void wait_for_CB_msg() {
 
 void switch_radio_to_100k_mode() {
 	#if DEBUG == 1
-		uart_puts("Switch to 100k\n\r");
+		uart_puts("Switch to 100k\n");
 	#endif
 
 	cli();
@@ -323,7 +323,7 @@ void switch_radio_to_100k_mode() {
 
 void switch_radio_to_10k_mode() {
 	#if DEBUG == 1
-		uart_puts("Switch to 10k\n\r");
+		uart_puts("Switch to 10k\n");
 	#endif
 
 	cli();
@@ -335,7 +335,7 @@ void flash_from_rf() {
 	timeoutCounter = 0;
 
 	#if DEBUG == 1
-		uart_puts("Start receive firmware\n\r");
+		uart_puts("Start receive firmware\n");
 	#endif
 
 	uint8_t state = 0;															// 0 = block has not started yet, 1 = block started
@@ -361,7 +361,7 @@ void flash_from_rf() {
 		hasData = 0;
 		if (data[7] != hmid[0] || data[8] != hmid[1] || data[9] != hmid[2]) {
 			#if DEBUG == 1
-				uart_puts("Got data, not for us\n\r");
+				uart_puts("Got data, not for us\n");
 			#endif
 
 			continue;
@@ -369,7 +369,7 @@ void flash_from_rf() {
 
 		if (data[3] != 0xCA) {
 			#if DEBUG == 1
-				uart_puts("Got other message type\n\r");
+				uart_puts("Got other message type\n");
 			#endif
 
 			continue;
@@ -386,13 +386,13 @@ void flash_from_rf() {
 				state = 0;
 
 				#if DEBUG == 1
-					uart_puts("Retransmit. Will reflash!\n\r");
+					uart_puts("Retransmit. Will reflash!\n");
 				#endif
 			} else {
 				state = 0;
 
 				#if DEBUG == 1
-					uart_puts("FATAL: Wrong msgId detected!\n\r");
+					uart_puts("FATAL: Wrong msgId detected!\n");
 				#endif
 			}
 		}
@@ -402,7 +402,7 @@ void flash_from_rf() {
 			blockLen += data[11];
 			if (blockLen != SPM_PAGESIZE) {
 				#if DEBUG == 1
-					uart_puts("Block is not page size\n\r");
+					uart_puts("Block is not page size\n");
 				#endif
 
 				state = 0;
@@ -410,7 +410,7 @@ void flash_from_rf() {
 			}
 			if (data[0]-11 > SPM_PAGESIZE) {
 				#if DEBUG == 1
-					uart_puts("Block to big\n\r");
+					uart_puts("Block to big\n");
 				#endif
 
 				state = 0;
@@ -423,7 +423,7 @@ void flash_from_rf() {
 		} else {
 			if (blockPos + data[0]-9 > blockLen) {
 				#if DEBUG == 1
-					uart_puts("Got more data than blocklen\n\r");
+					uart_puts("Got more data than blocklen\n");
 				#endif
 
 				state = 0;
@@ -436,14 +436,14 @@ void flash_from_rf() {
 		if (data[2] == 0x20) {
 			if (blockPos != blockLen) {
 				#if DEBUG == 1
-					uart_puts("blockLen and blockPos do not match\n\r");
+					uart_puts("blockLen and blockPos do not match\n");
 				#endif
 
 				state = 0;
 				continue;
 			} else {
 				#if DEBUG == 1
-					uart_puts("Got complete block!\n\r");
+					uart_puts("Got complete block!\n");
 				#endif
 
 				#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
