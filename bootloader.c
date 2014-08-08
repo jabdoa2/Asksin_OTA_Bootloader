@@ -253,7 +253,9 @@ void send_bootloader_sequence() {
 	#endif
 
 	/*
-	 * Send this message: 14 00 00 10 23 25 B7 00 00 00 00 serialNumber
+	 *                                 HM_ID                         HM_SERIAL
+	 *                               |--------|           |-----------------------------|
+	 * Send this message: 14 00 00 10 23 25 B7 00 00 00 00 41 42 43 44 45 46 47 48 49 50
 	 */
 	uint8_t msg[21] = {
 		0x14, 0x00, 0x00, 0x10, HM_ID, 0x00, 0x00, 0x00, 0x00, HM_SERIAL
