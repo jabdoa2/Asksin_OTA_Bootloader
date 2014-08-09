@@ -18,6 +18,8 @@
 #define DDR_STATUSLED        DDRD
 #define PIN_STATUSLED        4
 
+#define VERSION_STRING		"\nAskSin OTA bootloader V0.5\n\n"			// version number for debug info
+
 // set to 1 to activate debug info over UART
 #define DEBUG                1
 
@@ -35,10 +37,11 @@
 #define USE_ADRESS_SECTION   1
 
 // The model type
-#define HM_TYPE              0xF1, 0x01    // DIY (HB-UW-Sen-THPL-I)			// stored at 0x7FF2
+#define HM_TYPE              0xF1, 0x01    // DIY (HB-UW-Sen-THPL-I)			// stored at 0x7FF0
 
 // 10 bytes serial number. Must be unique for each device
 //#define HM_SERIAL            'H','B','0','D','e','f','a','u','l','t'			// stored at 0x7FF2
-#define HM_SERIAL            'S','E','N','0','T','H','P','L','0','2'
+#define HM_SERIAL            'S','E','N','0','T','H','P','L','0','2'			// stored at 0x7FF2
 
-#define HM_ID                0x1A, 0xCA, 0xE5									// stored at 0x7FFC
+// 3 bytes The device address (hm_id)
+#define HM_ID                0x11, 0x22, 0x33									// stored at 0x7FFC

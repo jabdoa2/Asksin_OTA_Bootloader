@@ -13,7 +13,7 @@
 	#define ADDRESS_SECTION __attribute__ ((section (".addressData")))
 	const char deviceType[]   ADDRESS_SECTION = {HM_TYPE};						// 2 bytes device type
 	const char serialNumber[] ADDRESS_SECTION = {HM_SERIAL};					// 10 bytes serial number
-	const char address[]      ADDRESS_SECTION = {HM_ID};						// 3 bytes device address
+	const char hmid[]         ADDRESS_SECTION = {HM_ID};						// 3 bytes device address
 #endif
 
 #if DEBUG == 1
@@ -29,6 +29,7 @@
 			pHexChar(buf[i]);
 			if(i+1 < len) uart_putc(' ');
 		}
+
 		return 0;
 	}
 #endif
@@ -119,7 +120,7 @@ void send_ack_if_requested(uint8_t* msg) {
 	}
 	
 	#if DEBUG == 1
-		uart_puts("S: ack\n");
+		uart_puts("Send ack\n");
 	#endif
 
 	// send ack to sender of msg
@@ -140,12 +141,13 @@ void send_ack_if_requested(uint8_t* msg) {
 		for (uint8_t i = 0; i < 8; ++i) {
 			flag = !!(crc & 0x8000);
 			crc <<= 1;
-			if (c & 0x80)
+			if (c & 0x80) {
 				crc |= 1;
-				if (flag) {
-					crc ^= 0x1021;
-				}
-				c <<= 1;
+			}
+			if (flag) {
+				crc ^= 0x1021;
+			}
+			c <<= 1;
 		}
 		return crc;
 	}
@@ -180,14 +182,7 @@ void send_ack_if_requested(uint8_t* msg) {
 
 		#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 			bitSet(PORT_STATUSLED, PIN_STATUSLED);
-			_delay_ms(250);
-			_delay_ms(250);
-			_delay_ms(250);
-			_delay_ms(250);
-			_delay_ms(250);
-			_delay_ms(250);
-			_delay_ms(250);
-			_delay_ms(250);
+			_delay_ms(2000);
 			bitClear(PORT_STATUSLED, PIN_STATUSLED);
 		#endif
 
@@ -196,7 +191,7 @@ void send_ack_if_requested(uint8_t* msg) {
 		#endif
 
 		wdt_enable(WDTO_1S);
-		while(1); // wait for Watchdog to generate reset
+		while(1);																// wait for Watchdog to generate reset
 	}
 #endif 
 
@@ -212,8 +207,8 @@ void startApplication() {
 	/* Interrupt Vektoren wieder gerade biegen */
 	cli();
 	temp = MCUCR;
-	MCUCR = temp | (1<<IVCE);
-	MCUCR = temp & ~(1<<IVSEL);
+	MCUCR = temp | (1 << IVCE);
+	MCUCR = temp & ~(1 << IVSEL);
 
 	start();																	// Rücksprung zur Adresse 0x0000
 }
@@ -224,8 +219,8 @@ void setup_interrupts_for_bootloader() {
 	char sregtemp = SREG;
 	cli();
 	temp = MCUCR;
-	MCUCR = temp | (1<<IVCE);
-	MCUCR = temp | (1<<IVSEL);
+	MCUCR = temp | (1 << IVCE);
+	MCUCR = temp | (1 << IVSEL);
 	SREG = sregtemp;
 }
 
@@ -249,7 +244,7 @@ void startApplicationOnTimeout() {
 
 void send_bootloader_sequence() {
 	#if DEBUG == 1
-		uart_puts("S: bootloader sequence\n");
+		uart_puts("Send bootloader sequence\n");
 	#endif
 
 	/*
@@ -258,7 +253,7 @@ void send_bootloader_sequence() {
 	 * Send this message: 14 00 00 10 23 25 B7 00 00 00 00 41 42 43 44 45 46 47 48 49 50
 	 */
 	uint8_t msg[21] = {
-		0x14, 0x00, 0x00, 0x10, HM_ID, 0x00, 0x00, 0x00, 0x00, HM_SERIAL
+		0x14, 0x00, 0x00, 0x10, hmid[0], hmid[1], hmid[2], 0x00, 0x00, 0x00, 0x00, HM_SERIAL
 	};
 
 	send_hm_data(msg);
@@ -286,7 +281,7 @@ void wait_for_CB_msg() {
 		hasData = 0;
 		if (data[7] != hmid[0] || data[8] != hmid[1] || data[9] != hmid[2]) {
 			#if DEBUG == 1
-				uart_puts("Got data, not for us\n");
+				uart_puts("Got data but not for us\n");
 			#endif
 
 			continue;
@@ -361,7 +356,7 @@ void flash_from_rf() {
 		hasData = 0;
 		if (data[7] != hmid[0] || data[8] != hmid[1] || data[9] != hmid[2]) {
 			#if DEBUG == 1
-				uart_puts("Got data, not for us\n");
+				uart_puts("Got data but not for us\n");
 			#endif
 
 			continue;
@@ -369,7 +364,7 @@ void flash_from_rf() {
 
 		if (data[3] != 0xCA) {
 			#if DEBUG == 1
-				uart_puts("Got other message type\n");
+				uart_puts("Got other msg type\n");
 			#endif
 
 			continue;
@@ -402,7 +397,7 @@ void flash_from_rf() {
 			blockLen += data[11];
 			if (blockLen != SPM_PAGESIZE) {
 				#if DEBUG == 1
-					uart_puts("Block is not page size\n");
+					uart_puts("Block length differ with page size\n");
 				#endif
 
 				state = 0;
@@ -423,7 +418,7 @@ void flash_from_rf() {
 		} else {
 			if (blockPos + data[0]-9 > blockLen) {
 				#if DEBUG == 1
-					uart_puts("Got more data than blocklen\n");
+					uart_puts("Got more data than block length\n");
 				#endif
 
 				state = 0;
@@ -436,7 +431,7 @@ void flash_from_rf() {
 		if (data[2] == 0x20) {
 			if (blockPos != blockLen) {
 				#if DEBUG == 1
-					uart_puts("blockLen and blockPos do not match\n");
+					uart_puts("Block length and block position do not match\n");
 				#endif
 
 				state = 0;
@@ -475,9 +470,9 @@ void flash_from_rf() {
  * Setup timer 0
  */
 void setup_timer() {
-	TCCR0B |= (1<<CS01) | (!(1<<CS00)) | (!(1<<CS02));	//PRESCALER 8
+	TCCR0B |= (1 << CS01) | (!(1 << CS00)) | (!(1 << CS02));					//PRESCALER 8
 	TCNT0 = 0;
-	TIMSK0 |= (1<<TOIE0);
+	TIMSK0 |= (1 << TOIE0);
 }
 
 /*
@@ -486,7 +481,7 @@ void setup_timer() {
  */
 void setup_cc1100_interrupts() {
 	EIMSK = 1 << INT0;															// Enable INT0
-	EICRA = 1 << ISC01 | 0<<ISC00;												// falling edge
+	EICRA = 1 << ISC01 | 0 << ISC00;											// falling edge
 }
 
 #if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
@@ -520,13 +515,25 @@ int main() {
 	#if DEBUG == 1
 		// init uart
 		uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) );
+
+		#if defined VERSION_STRING
+			uart_puts(VERSION_STRING);
+			sei();
+			_delay_ms(100);
+		#endif
+
 	#endif
 
 	switch_radio_to_10k_mode();													// go to standard 10k mode
+
 	send_bootloader_sequence();													// send broadcast to allow windows tool or flash_ota to discover device
+
 	wait_for_CB_msg();															// wait for msg in 10k mode to change to 100k mode
+
 	switch_radio_to_100k_mode();												// switch to 100k mode
+
 	wait_for_CB_msg();															// this is needed for windows tool
+
 	flash_from_rf();															// run the actual flashing
 }
 

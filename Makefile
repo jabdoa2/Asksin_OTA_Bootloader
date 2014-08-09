@@ -28,3 +28,4 @@ uart_code:
 clean:
 	$(MAKE) -C ./uart/ clean
 	rm bootloader.hex bootloader.elf *.o
+

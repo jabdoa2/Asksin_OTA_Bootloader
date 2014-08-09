@@ -17,12 +17,12 @@ const PROGMEM const uint8_t initVal[] = {									// define init settings for TR
 	0x11, 0x93,			// MDMCFG3
 	0x12, 0x03,			// MDMCFG2
 	0x15, 0x34,			// DEVIATN
-	0x16, 0x01,         // MCSM2
+	0x16, 0x01,			// MCSM2
 	0x17, 0x30,			// MCSM1: always go into IDLE
 	0x18, 0x18,			// MCSM0
 	0x19, 0x16,			// FOCCFG
 	0x1B, 0x43,			// AGCTRL2
-	//0x1E, 0x28,       // ..WOREVT1: tEVENT0 = 50 ms, RX timeout = 390 us
+	//0x1E, 0x28,		// ..WOREVT1: tEVENT0 = 50 ms, RX timeout = 390 us
 	//0x1F, 0xA0,		// ..WOREVT0:
 	//0x20, 0xFB,		// ..WORCTRL: EVENT1 = 3, WOR_RES = 0
 	0x21, 0x56,			// FREND1
