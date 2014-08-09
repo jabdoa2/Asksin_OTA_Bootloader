@@ -10,9 +10,17 @@ const PROGMEM const uint8_t initVal[] = {									// define init settings for TR
 	0x06, 0x3D,			// PKTLEN(x): 61									// packet length 61
 	0x07, 0x0C,			// PKTCTRL1:										// PQT = 0, CRC auto flush = 1, append status = 1, no address check
 	0x0B, 0x06,			// FSCTRL1:											// frequency synthesizer control
+
+	// 868.299866 MHz
 	0x0D, 0x21,			// FREQ2
 	0x0E, 0x65,			// FREQ1
 	0x0F, 0x6A,			// FREQ0
+
+	// 868.2895508  (better wireles connection)
+//	0x0D, 0x21,			// FREQ2
+//	0x0E, 0x65,			// FREQ1
+//	0x0F, 0x50,			// FREQ0
+
 	0x10, 0xC8,			// MDMCFG4
 	0x11, 0x93,			// MDMCFG3
 	0x12, 0x03,			// MDMCFG2
