@@ -1,10 +1,14 @@
 Bidcos Bootloader for Atmega
 ======================
 
-This version is modifyed for working with the Atmega328p at the universal sensor board
+Currently tested at Atmega328p and Atmega644.
+
+* Tested on HM-LC-Sw1PBU-FM (https://github.com/jabdoa2/Asksin_HM_LC_Sw1PBU_FM)
+* Tested on HB-UW-Sen-THPL (https://github.com/kc-GitHub/Wettersensor)
 
 Prepare device:
 * Clone repository
+* The config.h is configured to the Atmega328p (HB-UW-Sen-THPL). For the HM-LC-Sw1PBU-FM with Atmega644 you must rename the config-Atmega644.h to config.h
 * Build source: make
 ```
 make
@@ -16,9 +20,14 @@ make
 ```
 avrdude -p m328p -P usb -c usbasp -U lfuse:w:0xE2:m -U hfuse:w:0xD0:m -U lock:w:0x2F:m
 ```
-* Flash to device:
+* Flash to device (Atmega328p):
 ```
 avrdude -p m328p -P usb -c usbasp -V -U flash:w:bootloader.hex
+```
+
+* Flash to device (Atmega644):
+```
+avrdude -p m644 -P usb -c usbasp -V -U flash:w:bootloader.hex
 ```
 
 Convert payload and flash:

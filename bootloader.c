@@ -1,20 +1,20 @@
 #include "bootloader.h"
 #include "config.h"
 
+#define VERSION_STRING   "\nAskSin OTA bootloader V0.5\n\n"						// version number for debug info
+
 #if DEBUG == 1
 	#define BOOT_UART_BAUD_RATE 57600     // Baudrate
 #endif
 
-#if USE_ADRESS_SECTION == 1
-	/*****************************************
-	 *        Address data section           *
-	 *           See Makefile                *
-	 *****************************************/
-	#define ADDRESS_SECTION __attribute__ ((section (".addressData")))
-	const char deviceType[]   ADDRESS_SECTION = {HM_TYPE};						// 2 bytes device type
-	const char serialNumber[] ADDRESS_SECTION = {HM_SERIAL};					// 10 bytes serial number
-	const char hmid[]         ADDRESS_SECTION = {HM_ID};						// 3 bytes device address
-#endif
+/*****************************************
+ *        Address data section           *
+ *           See Makefile                *
+ *****************************************/
+#define ADDRESS_SECTION __attribute__ ((section (".addressData")))
+const char deviceType[]   ADDRESS_SECTION = {HM_TYPE};						// 2 bytes device type
+const char serialNumber[] ADDRESS_SECTION = {HM_SERIAL};					// 10 bytes serial number
+const char hmid[]         ADDRESS_SECTION = {HM_ID};						// 3 bytes device address
 
 #if DEBUG == 1
 	char pHexChar(const uint8_t val) {
@@ -516,12 +516,9 @@ int main() {
 		// init uart
 		uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) );
 
-		#if defined VERSION_STRING
-			uart_puts(VERSION_STRING);
-			sei();
-			_delay_ms(100);
-		#endif
-
+		uart_puts(VERSION_STRING);
+		sei();
+		_delay_ms(100);
 	#endif
 
 	switch_radio_to_10k_mode();													// go to standard 10k mode
