@@ -26,12 +26,20 @@ make HM_LC_Sw1PBU_FM_8k
 * We set lock Bits for bootloader section mode 2 (SPM prohibited), so the bootloader can't write his self.
 * LPM must allowed, so we store the adress data of the device in the bootloader section and the application
 * must can read the bootloader section.
+* See: http://eleccelerator.com/fusecalc/fusecalc.php?chip=atmega328p&LOW=E2&HIGH=D0&EXTENDED=06&LOCKBIT=2F
 ```
-avrdude -p m328p -P usb -c usbasp -U lfuse:w:0xE2:m -U hfuse:w:0xD0:m -U lock:w:0x2F:m
+avrdude -p m328p -P usb -c usbasp -U lfuse:w:0xE2:m -U hfuse:w:0xD0:m -U efuse:w:0x06:m -U lock:w:0x2F:m
 ```
 * Flash to device (Atmega328p):
 ```
 avrdude -p m328p -P usb -c usbasp -V -U flash:w:Bootloader-AskSin-OTA-HB_UW_Sen_THPL.hex
+```
+
+
+* Fuse settings for Atmega644 for 4k Boorloader size (HM-LC-Sw1PBU-FM):
+http://eleccelerator.com/fusecalc/fusecalc.php?chip=atmega644&LOW=E2&HIGH=D0&LOCKBIT=2F
+```
+avrdude -p m644 -P usb -c usbasp -U lfuse:w:0xFD:m -U hfuse:w:0xD8:m -U lock:w:0x2F:m
 ```
 
 * Flash to device (Atmega644):
