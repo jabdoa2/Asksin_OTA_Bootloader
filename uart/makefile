@@ -2,7 +2,7 @@
 # Makefile to compile and link the UART library and test program
 # Author: Peter Fleury
 # File:   $Id: Makefile.uart,v 1.4 2012/09/15 15:01:39 peter Exp $
-# based on WinAVR Makefile Template written by Eric B. Weddington, Jörg Wunsch, et al.
+# based on WinAVR Makefile Template written by Eric B. Weddington, JÃ¶rg Wunsch, et al.
 #
 # Adjust F_CPU below to the clock frequency in Mhz of your AVR target
 #
@@ -37,7 +37,7 @@
 
 
 # MCU name
-MCU = atmega328p
+MCU = $(MCU)
 
 
 # Processor frequency.

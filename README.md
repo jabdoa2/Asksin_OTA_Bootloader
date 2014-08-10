@@ -1,18 +1,27 @@
 Bidcos Bootloader for Atmega
-======================
+============================
 
-Currently tested at Atmega328p and Atmega644.
+Currently tested at Atmega328p, Atmega644 not tested yet.
 
-* Tested on HM-LC-Sw1PBU-FM (https://github.com/jabdoa2/Asksin_HM_LC_Sw1PBU_FM)
 * Tested on HB-UW-Sen-THPL (https://github.com/kc-GitHub/Wettersensor)
+* Not yest tested on HM-LC-Sw1PBU-FM. (https://github.com/jabdoa2/Asksin_HM_LC_Sw1PBU_FM)
 
 Prepare device:
 * Clone repository
 * The config.h is configured to the Atmega328p (HB-UW-Sen-THPL). For the HM-LC-Sw1PBU-FM with Atmega644 you must rename the config-Atmega644.h to config.h
-* Build source: make
+* Build source for HB-UW-Sen-THPL
 ```
-make
+make HB_UW_Sen_THPL
 ```
+* Build source for HM-LC-Sw1PBU-FM
+```
+make HM_LC_Sw1PBU_FM
+```
+* Build source for HM-LC-Sw1PBU-FM (8k Bootloader space)
+```
+make HM_LC_Sw1PBU_FM_8k
+```
+
 * Write fuses:
 * We set lock Bits for bootloader section mode 2 (SPM prohibited), so the bootloader can't write his self.
 * LPM must allowed, so we store the adress data of the device in the bootloader section and the application
@@ -22,12 +31,12 @@ avrdude -p m328p -P usb -c usbasp -U lfuse:w:0xE2:m -U hfuse:w:0xD0:m -U lock:w:
 ```
 * Flash to device (Atmega328p):
 ```
-avrdude -p m328p -P usb -c usbasp -V -U flash:w:bootloader.hex
+avrdude -p m328p -P usb -c usbasp -V -U flash:w:Bootloader-AskSin-OTA-HB_UW_Sen_THPL.hex
 ```
 
 * Flash to device (Atmega644):
 ```
-avrdude -p m644 -P usb -c usbasp -V -U flash:w:bootloader.hex
+avrdude -p m644 -P usb -c usbasp -V -U flash:w:Bootloader-AskSin-OTA-HM_LC_Sw1PBU_FM.hex
 ```
 
 Convert payload and flash:

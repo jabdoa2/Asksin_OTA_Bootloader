@@ -87,9 +87,9 @@
 #define PA_MaxPower                 0xC0
 
 // some macros for TRX868 communication
-#define wait_Miso()       while(bitRead(PORT_SPI, PIN_SPI_MISO))				// wait until SPI MISO line goes low
-#define cc1101_Select()   bitClear(PORT_SPI, PIN_SPI_SS)						// select (SPI) CC1101
-#define cc1101_Deselect() bitSet(PORT_SPI, PIN_SPI_SS)							// deselect (SPI) CC1101
+#define wait_Miso()                 while(bitRead(PORT_SPI, PIN_SPI_MISO))		// wait until SPI MISO line goes low
+#define cc1101_Select()             bitClear(PORT_SPI, PIN_SPI_SS)				// select (SPI) CC1101
+#define cc1101_Deselect()           bitSet(PORT_SPI, PIN_SPI_SS)				// deselect (SPI) CC1101
 
 struct s_trx868 {																// TRX868 communication variables
 	uint8_t rfState;															// RF state
