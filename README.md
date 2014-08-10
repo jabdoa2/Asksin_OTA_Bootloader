@@ -37,9 +37,9 @@ avrdude -p m328p -P usb -c usbasp -V -U flash:w:Bootloader-AskSin-OTA-HB_UW_Sen_
 
 
 * Fuse settings for Atmega644 for 4k Bootloader size (HM-LC-Sw1PBU-FM):
-http://eleccelerator.com/fusecalc/fusecalc.php?chip=atmega644&LOW=E2&HIGH=D0&LOCKBIT=2F
+http://eleccelerator.com/fusecalc/fusecalc.php?chip=atmega644&LOW=FD&HIGH=DA&LOCKBIT=2F
 ```
-avrdude -p m644 -P usb -c usbasp -U lfuse:w:0xFD:m -U hfuse:w:0xD8:m -U lock:w:0x2F:m
+avrdude -p m644 -P usb -c usbasp -U lfuse:w:0xFD:m -U hfuse:w:0xDA:m -U lock:w:0x2F:m
 ```
 
 * Flash to device (Atmega644):
