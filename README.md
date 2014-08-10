@@ -37,7 +37,11 @@ srec_cat <payload.hex> -intel -fill 0xFF 0x0000 0x6FFE -Cyclic_Redundancy_Check_
 * in both cases you end up with the binary, which has to go through the converter to get the EQ3 format
 * Use the converter (need php-cli):
 ```
-php convert.php payload.bin payload.eq3 # convert to eq3 hex format
+./bin2eq3.php payload.bin payload.eq3 # convert to eq3 hex format
+
+Dependent on the flash page size of the desired AVR, a different page size can pass as third parameter in bytes. The default pages size is 256 bytes.
+E.g. the Atmega328 needs a page size of 128 bytes.
+
 tar -czf payload.tar.gz payload.eq3 # create .tar.gz for homematic windows tool
 ```
 * Open serial with 57600 baud to see debug output
