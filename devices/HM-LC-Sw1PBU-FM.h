@@ -22,7 +22,7 @@
 #define DEBUG                1
 
 // Enable CRC Check before application start. Requires firmware to include CRC checksum at the end.
-#define CRC_FLASH            0
+#define CRC_FLASH            1
 
 // adress of CRC checksum if CRC check is enabled. See below. Expect a CRC16 little endian
 // is defined in makefile
@@ -41,4 +41,4 @@
 #define HM_SERIAL            'K', 'E', 'Q', '0', '0', '0', '0', '0', '0', '1'
 
 // 3 bytes The device address (hm_id)
-#define HM_ID                0xAB, 0xCD, 0xEF
+#define HM_ID                0x12, 0x34, 0x56

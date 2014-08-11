@@ -12,25 +12,22 @@
  *           See Makefile                *
  *****************************************/
 #define ADDRESS_SECTION __attribute__ ((section (".addressData")))
-const char deviceType[]   ADDRESS_SECTION = {HM_TYPE};						// 2 bytes device type
-const char serialNumber[] ADDRESS_SECTION = {HM_SERIAL};					// 10 bytes serial number
-const char hmid[]         ADDRESS_SECTION = {HM_ID};						// 3 bytes device address
+const char deviceType[2]    ADDRESS_SECTION = {HM_TYPE};						// 2 bytes device type
+const char serialNumber[10] ADDRESS_SECTION = {HM_SERIAL};						// 10 bytes serial number
+const char hmid[3]          ADDRESS_SECTION = {HM_ID};							// 3 bytes device address
 
 #if DEBUG == 1
-	char pHexChar(const uint8_t val) {
+	void pHexChar(const uint8_t val) {
 		const char hexDigits[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 		uart_putc(hexDigits[val >> 4]);
 		uart_putc(hexDigits[val & 0xF]);
-		return 0;
 	}
 
-	char pHex(const uint8_t *buf, uint16_t len) {
-		for (uint16_t i=0; i<len; i++) {
+	void pHex(const uint8_t *buf, uint8_t len) {
+		for (uint16_t i=0; i < len; i++) {
 			pHexChar(buf[i]);
-			if(i+1 < len) uart_putc(' ');
 		}
-
-		return 0;
+		uart_putc(' ');
 	}
 #endif
 
@@ -438,7 +435,7 @@ void flash_from_rf() {
 				continue;
 			} else {
 				#if DEBUG == 1
-					uart_puts("Got complete block!\n");
+					uart_puts("Block complete!\n");
 				#endif
 
 				#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
@@ -463,7 +460,6 @@ void flash_from_rf() {
 			state = 0;
 		}
 	}
-
 }
 
 /**
@@ -515,9 +511,8 @@ int main() {
 	#if DEBUG == 1
 		// init uart
 		uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) );
-
-		uart_puts(VERSION_STRING);
 		sei();
+		uart_puts(VERSION_STRING);
 		_delay_ms(100);
 	#endif
 
