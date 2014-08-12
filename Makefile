@@ -17,18 +17,11 @@ CC               = avr-gcc
 OPTIMIZE         = -Os
 
 OBJCOPY          = avr-objcopy
+FORMAT           = ihex
 
 # Override is only needed by avr-lib build system.
 override CFLAGS  = -g -Wall $(OPTIMIZE) -mmcu=$(MCU) -DF_CPU=$(F_CPU)
 override LDFLAGS = -Wl,--section-start=.text=${BOOTLOADER_START},--section-start=.addressData=${ADDRESS_DATA_START}
-
-SIZE             = avr-size
-FORMAT           = ihex
-
-HEXSIZE          = $(SIZE) --target=$(FORMAT) $(PROGRAM)-$(TARGET)$(SUFFIX).hex
-ELFSIZE          = $(SIZE) -A $(FORMAT) $(PROGRAM)-$(TARGET)$(SUFFIX).elf
-AVRMEM           = avr-mem.sh $(FORMAT) $(PROGRAM)-$(TARGET)$(SUFFIX).elf $(MCU)
-
 
 
 all:
@@ -68,7 +61,7 @@ hex: uart_code
 	$(CC) -Wall    -std=c99 -mmcu=$(MCU) $(LDFLAGS) -DF_CPU=$(F_CPU) -D$(TARGET) -DCODE_LEN=${CODE_LEN} $(OPTIMIZE) bootloader.c cc.o uart/uart.o -o $(PROGRAM)-$(TARGET)$(SUFFIX).elf
 	$(OBJCOPY) -j .text -j .data -j .addressData -O $(FORMAT) $(PROGRAM)-$(TARGET)$(SUFFIX).elf $(PROGRAM)-$(TARGET)$(SUFFIX).hex
 
-	@echo; echo 'Binary size:'; echo '------------'; $(HEXSIZE);
+	avr-size -C --mcu=$(MCU) $(PROGRAM)-$(TARGET)$(SUFFIX).elf
 
 uart_code:
 	$(MAKE) -C ./uart/ MCU=$(MCU)

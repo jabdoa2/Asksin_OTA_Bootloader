@@ -1,10 +1,10 @@
 #include "bootloader.h"
 #include "config.h"
 
-#define VERSION_STRING   "\nAskSin OTA bootloader V0.5\n\n"						// version number for debug info
-
 #if DEBUG == 1
-	#define BOOT_UART_BAUD_RATE 57600     // Baudrate
+//	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.5.1 \n\n"			// version number for debug info
+	#define VERSION_STRING       "\nV0.5.1\n\n"									// version number for debug info
+	#define BOOT_UART_BAUD_RATE  57600											// Baudrate
 #endif
 
 /*****************************************
@@ -12,9 +12,9 @@
  *           See Makefile                *
  *****************************************/
 #define ADDRESS_SECTION __attribute__ ((section (".addressData")))
-const char deviceType[2]    ADDRESS_SECTION = {HM_TYPE};						// 2 bytes device type
-const char serialNumber[10] ADDRESS_SECTION = {HM_SERIAL};						// 10 bytes serial number
-const char hmid[3]          ADDRESS_SECTION = {HM_ID};							// 3 bytes device address
+const uint8_t hm_Type[2]        ADDRESS_SECTION = {HM_TYPE};					// 2 bytes device type
+const uint8_t hm_serial[10]     ADDRESS_SECTION = {HM_SERIAL};					// 10 bytes serial number
+const uint8_t hm_id[3]          ADDRESS_SECTION = {HM_ID};						// 3 bytes device address
 
 #if DEBUG == 1
 	void pHexChar(const uint8_t val) {
@@ -101,12 +101,12 @@ void send_hm_data(uint8_t *msg) {
 }
 
 void send_ack(uint8_t *receiver, uint8_t messageId) {
-	uint8_t ack_msg[11] = { 10, messageId, 0x80, 0x02, hmid[0], hmid[1], hmid[2], receiver[0], receiver[1], receiver[2], 0x00};
+	uint8_t ack_msg[11] = { 10, messageId, 0x80, 0x02, hmID[0], hmID[1], hmID[2], receiver[0], receiver[1], receiver[2], 0x00};
 	send_hm_data(ack_msg);	
 }
 
 void send_nack_to_msg(uint8_t *msg) {
-	uint8_t nack_msg[11] = { 10, msg[1], 0x80, 0x02, hmid[0], hmid[1], hmid[2], msg[4], msg[5], msg[6], 0x80};
+	uint8_t nack_msg[11] = { 10, msg[1], 0x80, 0x02, hmID[0], hmID[1], hmID[2], msg[4], msg[5], msg[6], 0x80};
 	send_hm_data(nack_msg);	
 }
 
@@ -117,7 +117,7 @@ void send_ack_if_requested(uint8_t* msg) {
 	}
 	
 	#if DEBUG == 1
-		uart_puts("Send ack\n");
+		uart_puts_P("Send ack\n");
 	#endif
 
 	// send ack to sender of msg
@@ -169,7 +169,7 @@ void send_ack_if_requested(uint8_t* msg) {
 	void resetOnCRCFail(){
 		if(crc_app_ok()){
 			#if DEBUG == 1
-				uart_puts("CRC OK\r\n");
+				uart_puts_P("CRC OK\r\n");
 				_delay_ms(250);
 			#endif
 
@@ -184,7 +184,7 @@ void send_ack_if_requested(uint8_t* msg) {
 		#endif
 
 		#if DEBUG == 1
-			uart_puts("CRC fail: Reboot\r\n");
+			uart_puts_P("CRC fail: Reboot\r\n");
 		#endif
 
 		wdt_enable(WDTO_1S);
@@ -224,7 +224,7 @@ void setup_interrupts_for_bootloader() {
 void startApplicationOnTimeout() {
 	if (timeoutCounter > 30000) {												// wait about 10s at 8Mhz
 		#if DEBUG == 1
-			uart_puts("Timeout. Start program!\n");
+			uart_puts_P("Timeout. Start program!\n");
 			_delay_ms(250);
 		#endif
 
@@ -241,7 +241,7 @@ void startApplicationOnTimeout() {
 
 void send_bootloader_sequence() {
 	#if DEBUG == 1
-		uart_puts("Send bootloader sequence\n");
+		uart_puts_P("Send bootloader sequence\n");
 	#endif
 
 	/*
@@ -250,7 +250,9 @@ void send_bootloader_sequence() {
 	 * Send this message: 14 00 00 10 23 25 B7 00 00 00 00 41 42 43 44 45 46 47 48 49 50
 	 */
 	uint8_t msg[21] = {
-		0x14, 0x00, 0x00, 0x10, hmid[0], hmid[1], hmid[2], 0x00, 0x00, 0x00, 0x00, HM_SERIAL
+		0x14, 0x00, 0x00, 0x10, hmID[0], hmID[1], hmID[2], 0x00, 0x00, 0x00, 0x00,
+		hmSerial[0], hmSerial[1], hmSerial[2], hmSerial[3], hmSerial[4],
+		hmSerial[5], hmSerial[6], hmSerial[7], hmSerial[8], hmSerial[9]
 	};
 
 	send_hm_data(msg);
@@ -258,7 +260,7 @@ void send_bootloader_sequence() {
 
 void wait_for_CB_msg() {
 	#if DEBUG == 1
-		uart_puts("Wait for CB Msg\n");
+		uart_puts_P("Wait for CB Msg\n");
 	#endif
 
 	timeoutCounter = 0;															// reset timeout
@@ -276,9 +278,9 @@ void wait_for_CB_msg() {
 		hm_dec(data);
 
 		hasData = 0;
-		if (data[7] != hmid[0] || data[8] != hmid[1] || data[9] != hmid[2]) {
+		if (data[7] != hmID[0] || data[8] != hmID[1] || data[9] != hmID[2]) {
 			#if DEBUG == 1
-				uart_puts("Got data but not for us\n");
+				uart_puts_P("Got data but not for us\n");
 			#endif
 
 			continue;
@@ -289,7 +291,7 @@ void wait_for_CB_msg() {
 		 */
 		if (data[3] == 0xCB) {
 			#if DEBUG == 1
-				uart_puts("Got message to start config\n");
+				uart_puts_P("Got message to start config\n");
 			#endif
 
 			flasher_hmid[0] = data[4];
@@ -305,7 +307,7 @@ void wait_for_CB_msg() {
 
 void switch_radio_to_100k_mode() {
 	#if DEBUG == 1
-		uart_puts("Switch to 100k\n");
+		uart_puts_P("Switch to 100k\n");
 	#endif
 
 	cli();
@@ -315,7 +317,7 @@ void switch_radio_to_100k_mode() {
 
 void switch_radio_to_10k_mode() {
 	#if DEBUG == 1
-		uart_puts("Switch to 10k\n");
+		uart_puts_P("Switch to 10k\n");
 	#endif
 
 	cli();
@@ -327,7 +329,7 @@ void flash_from_rf() {
 	timeoutCounter = 0;
 
 	#if DEBUG == 1
-		uart_puts("Start receive firmware\n");
+		uart_puts_P("Start receive firmware\n");
 	#endif
 
 	uint8_t state = 0;															// 0 = block has not started yet, 1 = block started
@@ -351,9 +353,9 @@ void flash_from_rf() {
 		hm_dec(data);
 
 		hasData = 0;
-		if (data[7] != hmid[0] || data[8] != hmid[1] || data[9] != hmid[2]) {
+		if (data[7] != hmID[0] || data[8] != hmID[1] || data[9] != hmID[2]) {
 			#if DEBUG == 1
-				uart_puts("Got data but not for us\n");
+				uart_puts_P("Got data but not for us\n");
 			#endif
 
 			continue;
@@ -361,7 +363,7 @@ void flash_from_rf() {
 
 		if (data[3] != 0xCA) {
 			#if DEBUG == 1
-				uart_puts("Got other msg type\n");
+				uart_puts_P("Got other msg type\n");
 			#endif
 
 			continue;
@@ -378,13 +380,13 @@ void flash_from_rf() {
 				state = 0;
 
 				#if DEBUG == 1
-					uart_puts("Retransmit. Will reflash!\n");
+					uart_puts_P("Retransmit. Will reflash!\n");
 				#endif
 			} else {
 				state = 0;
 
 				#if DEBUG == 1
-					uart_puts("FATAL: Wrong msgId detected!\n");
+					uart_puts_P("FATAL: Wrong msgId detected!\n");
 				#endif
 			}
 		}
@@ -394,7 +396,7 @@ void flash_from_rf() {
 			blockLen += data[11];
 			if (blockLen != SPM_PAGESIZE) {
 				#if DEBUG == 1
-					uart_puts("Block length differ with page size\n");
+					uart_puts_P("Block length differ with page size\n");
 				#endif
 
 				state = 0;
@@ -402,7 +404,7 @@ void flash_from_rf() {
 			}
 			if (data[0]-11 > SPM_PAGESIZE) {
 				#if DEBUG == 1
-					uart_puts("Block to big\n");
+					uart_puts_P("Block to big\n");
 				#endif
 
 				state = 0;
@@ -415,7 +417,7 @@ void flash_from_rf() {
 		} else {
 			if (blockPos + data[0]-9 > blockLen) {
 				#if DEBUG == 1
-					uart_puts("Got more data than block length\n");
+					uart_puts_P("Got more data than block length\n");
 				#endif
 
 				state = 0;
@@ -428,14 +430,14 @@ void flash_from_rf() {
 		if (data[2] == 0x20) {
 			if (blockPos != blockLen) {
 				#if DEBUG == 1
-					uart_puts("Block length and block position do not match\n");
+					uart_puts_P("Block length and block position do not match\n");
 				#endif
 
 				state = 0;
 				continue;
 			} else {
 				#if DEBUG == 1
-					uart_puts("Block complete!\n");
+					uart_puts_P("Block complete!\n");
 				#endif
 
 				#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
@@ -500,8 +502,7 @@ int main() {
 	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 		bitSet(DDR_STATUSLED, PIN_STATUSLED);									// Set pin for LED as output
 
-		blinkLED();																// Blink status led 2 times, indicating bootloader
-		blinkLED();
+		blinkLED();																// Blink status led indicating bootloader
 	#endif
 
 	setup_interrupts_for_bootloader();											// map to correct interrupt table for bootloader
@@ -511,12 +512,16 @@ int main() {
 	#if DEBUG == 1
 		// init uart
 		uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) );
-		sei();
-		uart_puts(VERSION_STRING);
-		_delay_ms(100);
+		uart_puts_P(VERSION_STRING);
 	#endif
 
+	// we must copy the adress data from program space first
+	memcpy_P(&hmID, &hm_id[0], 3);
+	memcpy_P(&hmSerial, &hm_serial[0], 10);
+
 	switch_radio_to_10k_mode();													// go to standard 10k mode
+
+	blinkLED();																	// Blink status led again after init done
 
 	send_bootloader_sequence();													// send broadcast to allow windows tool or flash_ota to discover device
 
