@@ -2,8 +2,12 @@
 #include "config.h"
 
 #if DEBUG > 0
-	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.6 \n\n"			// version number for debug info
+	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.6.1 \n\n"			// version number for debug info
 	#define BOOT_UART_BAUD_RATE  57600											// Baudrate
+#endif
+
+#ifndef WAIT_FOR_CONFIG
+	WAIT_FOR_CONFIG = 10;
 #endif
 
 /*****************************************
@@ -31,13 +35,16 @@ const uint8_t hm_id[3]          ADDRESS_SECTION = {HM_ID};						// 3 bytes devic
 #endif
 
 int main() {
+	uint8_t watchdogReset = 0;
+	watchdogReset = bitRead(MCUSR, WDRF);										// is reset triggert from watchdog?
+
 	MCUSR=0;																	// disable watchdog (used for software reset the device)
 	wdt_reset();
 	wdt_disable();
 
 	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 		bitSet(DDR_STATUSLED, PIN_STATUSLED);									// Set pin for LED as output
-		blinkLED();																// Blink status led indicating bootloader
+		blinkLED(25, 200);														// Blink status led indicating bootloader
 	#endif
 
 	setup_interrupts();
@@ -54,16 +61,41 @@ int main() {
 	#endif
 
 	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined (INPUT_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
-		/**
-		 * Check config button pressed after reset, then start bootloader. Else start application.
-		 */
 		bitClear(DDR_CONFIG_BTN, PIN_CONFIG_BTN);								// Set pin for config button as input
 		bitSet(PORT_CONFIG_BTN, PIN_CONFIG_BTN);								// set pullup
 		_delay_us(10);
 
-		if( bitRead(INPUT_CONFIG_BTN, PIN_CONFIG_BTN) ) {						// check if button not pressed (button is hight)
+		uint8_t crcOk = 1;
+		#if CRC_FLASH == 1
+			crcOk = crc_app_ok();
+		#endif
+
+		if (watchdogReset && crcOk) {
+			uart_puts_P("Wait some seconds for config button\n");
+			uint16_t waitForButton = 0;
+
+			/**
+			 * Wait up to <WAIT_FOR_CONFIG> seconds until config button was pressed.
+			 * We will wait only if before a watchdog reset occurs and if crc check was true
+			 */
+			while(waitForButton <= WAIT_FOR_CONFIG * 2) {
+				#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
+					blinkLED(5, 495);											// blink led
+				#endif
+
+				if( !bitRead(INPUT_CONFIG_BTN, PIN_CONFIG_BTN) ) {
+					break;
+				}
+				waitForButton++;
+			}
+		}
+
+		/**
+		 * Check config button pressed after reset, then start bootloader. Else start application.
+		 */
+		if( bitRead(INPUT_CONFIG_BTN, PIN_CONFIG_BTN) ) {						// check if button not pressed (button must be at high level)
 			#if CRC_FLASH == 1
-				if (crc_app_ok()) {
+				if (crcOk) {
 					startApplication();											// then start Application
 				}
 			#else
@@ -74,7 +106,7 @@ int main() {
 
 
 	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
-		blinkLED();																// Blink status led again after init done
+		blinkLED(25, 200);														// Blink status led again after init done
 	#endif
 
 	// we must copy the adress data from program space first
@@ -269,9 +301,7 @@ void send_ack_if_requested(uint8_t* msg) {
 			return;
 		}
 		#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
-			bitSet(PORT_STATUSLED, PIN_STATUSLED);
-			_delay_ms(2000);
-			bitClear(PORT_STATUSLED, PIN_STATUSLED);
+			blinkLED(2000, 1);													// blink led
 		#endif
 
 		wdt_reset();
@@ -529,9 +559,10 @@ void flash_from_rf() {
 	/*
 	 * Let the led blinks 1 time
 	 */
-	void blinkLED() {
+	void blinkLED(uint16_t onTime, uint16_t offTime) {
 		bitSet(PORT_STATUSLED, PIN_STATUSLED);									// Status-LED on
 		_delay_ms(25);
+
 		bitClear(PORT_STATUSLED, PIN_STATUSLED);								// Status-LED on
 		_delay_ms(200);
 	}

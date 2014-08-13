@@ -36,7 +36,7 @@ ISR(INT0_vect);
 ISR(TIMER0_OVF_vect);
 
 #if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
-	void blinkLED();
+	void blinkLED(uint16_t onTime, uint16_t offTime);
 #endif
 
 #if DEBUG > 1
