@@ -31,6 +31,46 @@ const uint8_t hm_id[3]          ADDRESS_SECTION = {HM_ID};						// 3 bytes devic
 	}
 #endif
 
+int main() {
+	MCUSR=0;																	// disable watchdog (used for software reset the device)
+	wdt_reset();
+	wdt_disable();
+
+	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
+		bitSet(DDR_STATUSLED, PIN_STATUSLED);									// Set pin for LED as output
+
+		blinkLED();																// Blink status led indicating bootloader
+	#endif
+
+	setup_interrupts_for_bootloader();											// map to correct interrupt table for bootloader
+	setup_timer();																// setup timer for timeout counter
+	setup_cc1100_interrupts();													// setup interrupts for cc1100
+
+	#if DEBUG == 1
+		// init uart
+		uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) );
+		uart_puts_P(VERSION_STRING);
+	#endif
+
+	// we must copy the adress data from program space first
+	memcpy_P(&hmID, &hm_id[0], 3);
+	memcpy_P(&hmSerial, &hm_serial[0], 10);
+
+	switch_radio_to_10k_mode();													// go to standard 10k mode
+
+	blinkLED();																	// Blink status led again after init done
+
+	send_bootloader_sequence();													// send broadcast to allow windows tool or flash_ota to discover device
+
+	wait_for_CB_msg();															// wait for msg in 10k mode to change to 100k mode
+
+	switch_radio_to_100k_mode();												// switch to 100k mode
+
+	wait_for_CB_msg();															// this is needed for windows tool
+
+	flash_from_rf();															// run the actual flashing
+}
+
 void program_page (uint32_t page, uint8_t *buf) {
 	uint16_t i;
 	uint8_t sreg;
@@ -485,46 +525,6 @@ void setup_cc1100_interrupts() {
 		_delay_ms(200);
 	}
 #endif
-
-int main() {
-	MCUSR=0;																	// disable watchdog (used for software reset the device)
-	wdt_reset();
-	wdt_disable();
-
-	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
-		bitSet(DDR_STATUSLED, PIN_STATUSLED);									// Set pin for LED as output
-
-		blinkLED();																// Blink status led indicating bootloader
-	#endif
-
-	setup_interrupts_for_bootloader();											// map to correct interrupt table for bootloader
-	setup_timer();																// setup timer for timeout counter
-	setup_cc1100_interrupts();													// setup interrupts for cc1100
-
-	#if DEBUG == 1
-		// init uart
-		uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) );
-		uart_puts_P(VERSION_STRING);
-	#endif
-
-	// we must copy the adress data from program space first
-	memcpy_P(&hmID, &hm_id[0], 3);
-	memcpy_P(&hmSerial, &hm_serial[0], 10);
-
-	switch_radio_to_10k_mode();													// go to standard 10k mode
-
-	blinkLED();																	// Blink status led again after init done
-
-	send_bootloader_sequence();													// send broadcast to allow windows tool or flash_ota to discover device
-
-	wait_for_CB_msg();															// wait for msg in 10k mode to change to 100k mode
-
-	switch_radio_to_100k_mode();												// switch to 100k mode
-
-	wait_for_CB_msg();															// this is needed for windows tool
-
-	flash_from_rf();															// run the actual flashing
-}
 
 /*
  * ISR for INT0 Interrupt
