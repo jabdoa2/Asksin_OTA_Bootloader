@@ -2,12 +2,12 @@
 #include "config.h"
 
 #if DEBUG > 0
-	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.6.1 \n\n"			// version number for debug info
+	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.6 \n\n"			// version number for debug info
 	#define BOOT_UART_BAUD_RATE  57600											// Baudrate
 #endif
 
 #ifndef WAIT_FOR_CONFIG
-	WAIT_FOR_CONFIG = 10;
+	#define WAIT_FOR_CONFIG = 10
 #endif
 
 /*****************************************
@@ -561,10 +561,10 @@ void flash_from_rf() {
 	 */
 	void blinkLED(uint16_t onTime, uint16_t offTime) {
 		bitSet(PORT_STATUSLED, PIN_STATUSLED);									// Status-LED on
-		_delay_ms(25);
+		while(onTime > 0) {_delay_ms(1); onTime--; }
 
 		bitClear(PORT_STATUSLED, PIN_STATUSLED);								// Status-LED on
-		_delay_ms(200);
+		while(offTime > 0) {_delay_ms(1); offTime--; }
 	}
 #endif
 
