@@ -42,9 +42,7 @@ int main() {
 		blinkLED();																// Blink status led indicating bootloader
 	#endif
 
-	setup_interrupts_for_bootloader();											// map to correct interrupt table for bootloader
-	setup_timer();																// setup timer for timeout counter
-	setup_cc1100_interrupts();													// setup interrupts for cc1100
+	setup_interrupts();
 
 	#if DEBUG > 0
 		// init uart
@@ -69,6 +67,34 @@ int main() {
 	wait_for_CB_msg();															// this is needed for windows tool
 
 	flash_from_rf();															// run the actual flashing
+}
+
+void setup_interrupts() {
+	/**
+	 * Setup interrupts for bootloder
+	 * map to correct interrupt table for bootloader
+	 */
+	unsigned char	temp;
+	/* Interrupt Vektoren verbiegen */
+	char sregtemp = SREG;
+//	cli();
+	temp = MCUCR;
+	MCUCR = temp | (1 << IVCE);
+	MCUCR = temp | (1 << IVSEL);
+	SREG = sregtemp;
+
+	 /**
+	  * Setup timer 0 for timeout counter
+	  */
+	TCCR0B |= (1 << CS01) | (!(1 << CS00)) | (!(1 << CS02));					//PRESCALER 8
+	TCNT0 = 0;
+	TIMSK0 |= (1 << TOIE0);
+
+	/**
+	 * Setup interrupt for INT0 at GDO0 on CC1101, falling edge.
+	 */
+	EIMSK = 1 << INT0;															// Enable INT0
+	EICRA = 1 << ISC01 | 0 << ISC00;											// falling edge
 }
 
 void program_page (uint32_t page, uint8_t *buf) {
@@ -248,17 +274,6 @@ void startApplication() {
 	MCUCR = temp & ~(1 << IVSEL);
 
 	start();																	// Rücksprung zur Adresse 0x0000
-}
-
-void setup_interrupts_for_bootloader() {
-	unsigned char	temp;
-	/* Interrupt Vektoren verbiegen */
-	char sregtemp = SREG;
-	cli();
-	temp = MCUCR;
-	MCUCR = temp | (1 << IVCE);
-	MCUCR = temp | (1 << IVSEL);
-	SREG = sregtemp;
 }
 
 void startApplicationOnTimeout() {
@@ -494,24 +509,6 @@ void flash_from_rf() {
 			state = 0;
 		}
 	}
-}
-
-/**
- * Setup timer 0
- */
-void setup_timer() {
-	TCCR0B |= (1 << CS01) | (!(1 << CS00)) | (!(1 << CS02));					//PRESCALER 8
-	TCNT0 = 0;
-	TIMSK0 |= (1 << TOIE0);
-}
-
-/*
- * Setup interrupt
- * INT0 at GDO0 on CC1101, falling edge
- */
-void setup_cc1100_interrupts() {
-	EIMSK = 1 << INT0;															// Enable INT0
-	EICRA = 1 << ISC01 | 0 << ISC00;											// falling edge
 }
 
 #if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)

@@ -16,6 +16,7 @@ uint8_t flasher_hmid[3];
 uint16_t timeoutCounter = 0;
 
 int main();
+void setup_interrupts();
 void program_page (uint32_t page, uint8_t *buf);
 void hm_enc(uint8_t *buffer);
 void hm_dec(uint8_t *buffer);
@@ -24,16 +25,12 @@ void send_ack(uint8_t *receiver, uint8_t messageId);
 void send_nack_to_msg(uint8_t *msg);
 void send_ack_if_requested(uint8_t* msg);
 void startApplication();
-void setup_interrupts_for_bootloader();
 void startApplicationOnTimeout();
 void send_bootloader_sequence();
 void wait_for_CB_msg();
 void switch_radio_to_100k_mode();
 void switch_radio_to_10k_mode();
 void flash_from_rf();
-
-void setup_timer();
-void setup_cc1100_interrupts();
 
 ISR(INT0_vect);
 ISR(TIMER0_OVF_vect);
