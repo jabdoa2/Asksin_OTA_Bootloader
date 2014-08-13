@@ -57,7 +57,9 @@ const uint8_t PROGMEM initValUpdate[] = {
 /*
  * initialize CC1101
  */
-void init(uint8_t mode100k) {
+void cc1101Init(uint8_t mode100k) {
+	cli();
+
 	bitSet(DDR_SPI, PIN_SPI_SS);												// set B2(SS) as Output
 	bitSet(DDR_SPI, PIN_SPI_MOSI);												// set B3(MOSI) as Output
 	bitClear(DDR_SPI, PIN_SPI_MISO);											// set B4(MISO) as Input
@@ -105,6 +107,8 @@ void init(uint8_t mode100k) {
 	cmdStrobe(CC1101_SWORRST);													// reset real time clock
 
 	_delay_ms(3);
+
+	sei();
 }
 
 void sendData(uint8_t *buf, uint8_t burst) {									// send data packet via RF

@@ -45,6 +45,10 @@ int main() {
 	setup_interrupts();
 
 	#if DEBUG > 0
+		uart_puts_P("Sw to 10k\n");
+	#endif
+	cc1101Init(CC1101_MODE_10k);												// Initialize cc1101 and go to standard 10k mode.
+
 		// init uart
 		uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) );
 		uart_puts_P(VERSION_STRING);
@@ -62,7 +66,11 @@ int main() {
 
 	wait_for_CB_msg();															// wait for msg in 10k mode to change to 100k mode
 
-	switch_radio_to_100k_mode();												// switch to 100k mode
+
+	#if DEBUG > 0
+		uart_puts_P("Sw to 100k\n");
+	#endif
+	cc1101Init(CC1101_MODE_100k);												// Initialize cc1101 again and switch to 100k mode
 
 	wait_for_CB_msg();															// this is needed for windows tool
 
@@ -359,26 +367,6 @@ void wait_for_CB_msg() {
 	}
 }
 
-void switch_radio_to_100k_mode() {
-	#if DEBUG > 0
-		uart_puts_P("Sw to 100k\n");
-	#endif
-
-	cli();
-	init(1);
-	sei();
-}
-
-void switch_radio_to_10k_mode() {
-	#if DEBUG > 0
-		uart_puts_P("Sw to 10k\n");
-	#endif
-
-	cli();
-	init(0);
-	sei();
-}
-
 void flash_from_rf() {
 	timeoutCounter = 0;
 
@@ -521,7 +509,7 @@ void flash_from_rf() {
 	void blinkLED() {
 		bitSet(PORT_STATUSLED, PIN_STATUSLED);									// Status-LED on
 		_delay_ms(25);
-		bitClear(PORT_STATUSLED, PIN_STATUSLED);									// Status-LED on
+		bitClear(PORT_STATUSLED, PIN_STATUSLED);								// Status-LED on
 		_delay_ms(200);
 	}
 #endif
