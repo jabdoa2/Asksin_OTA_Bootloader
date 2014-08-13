@@ -69,6 +69,9 @@ int main() {
 	flash_from_rf();															// run the actual flashing
 }
 
+/**
+ * Initialize all needed interrupts
+ */
 void setup_interrupts() {
 	/**
 	 * Setup interrupts for bootloder
