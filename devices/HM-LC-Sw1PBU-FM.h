@@ -1,22 +1,30 @@
 // Pin assignment for Atmega328p (Univarsalsensor)
 
 // Pin assignment for the cc1101 module
-#define PORT_SPI             PORTB
-#define DDR_SPI              DDRB
-#define PIN_SPI_SS           4
-#define PIN_SPI_MOSI         5
-#define PIN_SPI_MISO         6
-#define PIN_SPI_SCK          7
+#define PORT_SPI             PORTB												// The Port B Data Register
+#define DDR_SPI              DDRB												// The Port B Data Direction Register
+#define PIN_SPI_SS           4													// PB4 (SS)
+#define PIN_SPI_MOSI         5													// PB5 (MOSI)
+#define PIN_SPI_MISO         6													// PB6 (MISO)
+#define PIN_SPI_SCK          7													// PB7 (SCK)
+
+// Pin assignment for GDO0
+#define PORT_GDO0            PORTD												// The Port D Data Register
+#define DDR_GDO0             DDRD												// The Port D Data Direction Register
+#define PIN_GDO0             2													// PD2 where the GDO0 pin of the cc1101 module is connected
 
 // Pin assignment for status LED
-#define PORT_GDO0            PORTD
-#define DDR_GDO0             DDRD
-#define PIN_GDO0             2
+#define PORT_STATUSLED       PORTD												// The Port D Data Register
+#define DDR_STATUSLED        DDRD												// The Port D Data Direction Register
+#define PIN_STATUSLED        4													// PD4 where the status led sould connected (to ground)
 
-// Pin assignment for status LED
-#define PORT_STATUSLED       PORTB
-#define DDR_STATUSLED        DDRB
-#define PIN_STATUSLED        0
+// Pin assignment for config button (without hold the config button the main programm starts immediately if CRC was correct)
+// config defines and enable lins below to use config button
+//
+//#define PORT_CONFIG_BTN      PORTB											// The Port B Data Register
+//#define DDR_CONFIG_BTN       DDRB												// The Port B Data Direction Register
+//#define INPUT_CONFIG_BTN     PINB												// The Port B Input Pins Address
+//#define PIN_CONFIG_BTN       0													// PB0 where the button sould connected (to ground)
 
 /**
  * set to 1 to activate debug info over UART

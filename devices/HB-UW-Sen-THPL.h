@@ -1,28 +1,28 @@
 // Pin assignment for Atmega328p (Univarsalsensor)
 
 // Pin assignment for the cc1101 module
-#define PORT_SPI             PORTB
-#define DDR_SPI              DDRB
-#define PIN_SPI_SS           2
-#define PIN_SPI_MOSI         3
-#define PIN_SPI_MISO         4
-#define PIN_SPI_SCK          5
+#define PORT_SPI             PORTB												// The Port B Data Register
+#define DDR_SPI              DDRB												// The Port B Data Direction Register
+#define PIN_SPI_SS           2													// PB2 (SS)
+#define PIN_SPI_MOSI         3													// PB3 (MOSI)
+#define PIN_SPI_MISO         4													// PB4 (MISO)
+#define PIN_SPI_SCK          5													// PB5 (SCK)
+
+// Pin assignment for GDO0
+#define PORT_GDO0            PORTD												// The Port D Data Register
+#define DDR_GDO0             DDRD												// The Port D Data Direction Register
+#define PIN_GDO0             2													// PD2 where the GDO0 pin of the cc1101 module is connected
 
 // Pin assignment for status LED
-#define PORT_GDO0            PORTD
-#define DDR_GDO0             DDRD
-#define PIN_GDO0             2
-
-// Pin assignment for status LED
-#define PORT_STATUSLED       PORTD
-#define DDR_STATUSLED        DDRD
-#define PIN_STATUSLED        4
+#define PORT_STATUSLED       PORTD												// The Port D Data Register
+#define DDR_STATUSLED        DDRD												// The Port D Data Direction Register
+#define PIN_STATUSLED        4													// PD4 where the status led sould connected (to ground)
 
 // Pin assignment for config button
-#define PORT_CONFIG_BTN      PORTB
-#define DDR_CONFIG_BTN       DDRB
-#define PIN_CONFIG_BTN       PINB
-#define PIN_NR_CONFIG_BTN    0
+#define PORT_CONFIG_BTN      PORTB												// The Port B Data Register
+#define DDR_CONFIG_BTN       DDRB												// The Port B Data Direction Register
+#define INPUT_CONFIG_BTN     PINB												// The Port B Input Pins Address
+#define PIN_CONFIG_BTN       0													// PB0 where the button sould connected (to ground)
 
 /**
  * set to 1 to activate debug info over UART

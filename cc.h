@@ -9,6 +9,9 @@
 #include <util/delay.h>
 #include "config.h"
 
+#define CC1101_MODE_10k             0
+#define CC1101_MODE_100k            1
+
 #define HIGH                        0x1
 #define LOW                         0x0
 #define INPUT                       0x0
@@ -102,7 +105,7 @@ struct s_trx868 {																// TRX868 communication variables
 #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
 
-void init(uint8_t mode100k);
+void cc1101Init(uint8_t mode100k);
 void sendData(uint8_t *buf, uint8_t burst);
 uint8_t receiveData(uint8_t *buf);
 uint8_t detectBurst(void);

@@ -2,7 +2,7 @@
 #include "config.h"
 
 #if DEBUG > 0
-	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.5.1 \n\n"			// version number for debug info
+	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.6 \n\n"			// version number for debug info
 	#define BOOT_UART_BAUD_RATE  57600											// Baudrate
 #endif
 
@@ -53,15 +53,15 @@ int main() {
 		uart_puts_P(VERSION_STRING);
 	#endif
 
-	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
+	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined (INPUT_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
 		/**
 		 * Check config button pressed after reset, then start bootloader. Else start application.
 		 */
 		bitClear(DDR_CONFIG_BTN, PIN_CONFIG_BTN);								// Set pin for config button as input
-		bitSet(PORT_CONFIG_BTN, PIN_NR_CONFIG_BTN);								// set pullup
+		bitSet(PORT_CONFIG_BTN, PIN_CONFIG_BTN);								// set pullup
 		_delay_us(10);
 
-		if( bitRead(PIN_CONFIG_BTN, PIN_NR_CONFIG_BTN) ) {						// check if button not pressed (button is hight)
+		if( bitRead(INPUT_CONFIG_BTN, PIN_CONFIG_BTN) ) {						// check if button not pressed (button is hight)
 			#if CRC_FLASH == 1
 				if (crc_app_ok()) {
 					startApplication();											// then start Application
@@ -84,12 +84,10 @@ int main() {
 	send_bootloader_sequence();													// send broadcast to allow windows tool or flash_ota to discover device
 	wait_for_CB_msg();															// wait for msg in 10k mode to change to 100k mode
 
-
 	#if DEBUG > 0
 		uart_puts_P("Sw to 100k\n");
 	#endif
 	cc1101Init(CC1101_MODE_100k);												// Initialize cc1101 again and switch to 100k mode
-
 
 	wait_for_CB_msg();															// this is needed for windows tool
 	flash_from_rf();															// run the actual flashing
@@ -131,7 +129,6 @@ void setup_interrupts() {
 
 void program_page (uint32_t page, uint8_t *buf) {
 	uint16_t i;
-//	uint8_t sreg;
 
 	cli();																		// disable interrupts
 
@@ -156,7 +153,7 @@ void program_page (uint32_t page, uint8_t *buf) {
 	 */
 	boot_rww_enable ();
 
-	sei();																		// Re-enable interrupts
+	sei();																		// re-enable interrupts
 }
 
 void hm_enc(uint8_t *buffer) {
@@ -300,7 +297,7 @@ void startApplication() {
 	 * Vor Rücksprung eventuell benutzte Hardware deaktivieren
 	 * und Interrupts global deaktivieren, da kein "echter" Reset erfolgt
 	 */
-	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
+	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined(INPUT_CONFIG_BTN) && (PIN_CONFIG_BTN)
 		bitClear(PORT_CONFIG_BTN, PIN_CONFIG_BTN);								// reset pullup
 	#endif
 
