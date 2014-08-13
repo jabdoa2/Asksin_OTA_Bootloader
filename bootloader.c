@@ -498,7 +498,7 @@ void flash_from_rf() {
 				continue;
 			} else {
 				#if DEBUG > 0
-					uart_puts_P("Block complete!\n");
+					uart_puts_P(".");											// Block complete
 				#endif
 
 				#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
