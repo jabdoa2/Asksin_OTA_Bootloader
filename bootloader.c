@@ -53,6 +53,30 @@ int main() {
 		uart_puts_P(VERSION_STRING);
 	#endif
 
+	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
+		/**
+		 * Check config button pressed after reset, then start bootloader. Else start application.
+		 */
+		bitClear(DDR_CONFIG_BTN, PIN_CONFIG_BTN);								// Set pin for config button as input
+		bitSet(PORT_CONFIG_BTN, PIN_NR_CONFIG_BTN);								// set pullup
+		_delay_us(10);
+
+		if( bitRead(PIN_CONFIG_BTN, PIN_NR_CONFIG_BTN) ) {						// check if button not pressed (button is hight)
+			#if CRC_FLASH == 1
+				if (crc_app_ok()) {
+					startApplication();											// then start Application
+				}
+			#else
+				startApplication();												// then start Application
+			#endif
+		}
+	#endif
+
+
+	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
+		blinkLED();																// Blink status led again after init done
+	#endif
+
 	// we must copy the adress data from program space first
 	memcpy_P(&hmID, &hm_id[0], 3);
 	memcpy_P(&hmSerial, &hm_serial[0], 10);
@@ -276,6 +300,9 @@ void startApplication() {
 	 * Vor Rücksprung eventuell benutzte Hardware deaktivieren
 	 * und Interrupts global deaktivieren, da kein "echter" Reset erfolgt
 	 */
+	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
+		bitClear(PORT_CONFIG_BTN, PIN_CONFIG_BTN);								// reset pullup
+	#endif
 
 	/* Interrupt Vektoren wieder gerade biegen */
 	cli();

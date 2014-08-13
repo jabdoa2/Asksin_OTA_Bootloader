@@ -18,6 +18,11 @@
 #define DDR_STATUSLED        DDRD
 #define PIN_STATUSLED        4
 
+// Pin assignment for config button
+#define PORT_CONFIG_BTN      PORTB
+#define DDR_CONFIG_BTN       DDRB
+#define PIN_CONFIG_BTN       PINB
+#define PIN_NR_CONFIG_BTN    0
 
 /**
  * set to 1 to activate debug info over UART
