@@ -1,7 +1,7 @@
 #include "bootloader.h"
 #include "config.h"
 
-#if DEBUG == 1
+#if DEBUG > 0
 //	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.5.1 \n\n"			// version number for debug info
 	#define VERSION_STRING       "\nV0.5.1\n\n"									// version number for debug info
 	#define BOOT_UART_BAUD_RATE  57600											// Baudrate
@@ -16,7 +16,7 @@ const uint8_t hm_Type[2]        ADDRESS_SECTION = {HM_TYPE};					// 2 bytes devi
 const uint8_t hm_serial[10]     ADDRESS_SECTION = {HM_SERIAL};					// 10 bytes serial number
 const uint8_t hm_id[3]          ADDRESS_SECTION = {HM_ID};						// 3 bytes device address
 
-#if DEBUG == 1
+#if DEBUG > 1
 	void pHexChar(const uint8_t val) {
 		const char hexDigits[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 		uart_putc(hexDigits[val >> 4]);
@@ -46,7 +46,7 @@ int main() {
 	setup_timer();																// setup timer for timeout counter
 	setup_cc1100_interrupts();													// setup interrupts for cc1100
 
-	#if DEBUG == 1
+	#if DEBUG > 0
 		// init uart
 		uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) );
 		uart_puts_P(VERSION_STRING);
@@ -156,8 +156,8 @@ void send_ack_if_requested(uint8_t* msg) {
 		return;
 	}
 	
-	#if DEBUG == 1
-		uart_puts_P("Send ack\n");
+	#if DEBUG > 0
+		uart_puts_P("TX: ACK\n");
 	#endif
 
 	// send ack to sender of msg
@@ -208,8 +208,8 @@ void send_ack_if_requested(uint8_t* msg) {
 	 */
 	void resetOnCRCFail(){
 		if(crc_app_ok()){
-			#if DEBUG == 1
-				uart_puts_P("CRC OK\r\n");
+			#if DEBUG > 0
+				uart_puts_P("CRC OK\n");
 				_delay_ms(250);
 			#endif
 
@@ -223,8 +223,8 @@ void send_ack_if_requested(uint8_t* msg) {
 			bitClear(PORT_STATUSLED, PIN_STATUSLED);
 		#endif
 
-		#if DEBUG == 1
-			uart_puts_P("CRC fail: Reboot\r\n");
+		#if DEBUG > 0
+			uart_puts_P("CRC fail: Reboot\n");
 		#endif
 
 		wdt_enable(WDTO_1S);
@@ -263,7 +263,7 @@ void setup_interrupts_for_bootloader() {
 
 void startApplicationOnTimeout() {
 	if (timeoutCounter > 30000) {												// wait about 10s at 8Mhz
-		#if DEBUG == 1
+		#if DEBUG > 0
 			uart_puts_P("Timeout. Start program!\n");
 			_delay_ms(250);
 		#endif
@@ -280,8 +280,8 @@ void startApplicationOnTimeout() {
 }
 
 void send_bootloader_sequence() {
-	#if DEBUG == 1
-		uart_puts_P("Send bootloader sequence\n");
+	#if DEBUG > 0
+		uart_puts_P("TX: bootloader sequence\n");
 	#endif
 
 	/*
@@ -299,7 +299,7 @@ void send_bootloader_sequence() {
 }
 
 void wait_for_CB_msg() {
-	#if DEBUG == 1
+	#if DEBUG > 0
 		uart_puts_P("Wait for CB Msg\n");
 	#endif
 
@@ -315,7 +315,7 @@ void wait_for_CB_msg() {
 
 		hasData = 0;
 		if (data[7] != hmID[0] || data[8] != hmID[1] || data[9] != hmID[2]) {
-			#if DEBUG == 1
+			#if DEBUG > 0
 				uart_puts_P("Got data but not for us\n");
 			#endif
 
@@ -326,8 +326,8 @@ void wait_for_CB_msg() {
 		 * Wait for: 0F 01 00 CB 1A B1 50 AB CD EF 10 5B 11 F8 15 47
 		 */
 		if (data[3] == 0xCB) {
-			#if DEBUG == 1
-				uart_puts_P("Got message to start config\n");
+			#if DEBUG > 0
+				uart_puts_P("Got msg to start config\n");
 			#endif
 
 			flasher_hmid[0] = data[4];
@@ -342,8 +342,8 @@ void wait_for_CB_msg() {
 }
 
 void switch_radio_to_100k_mode() {
-	#if DEBUG == 1
-		uart_puts_P("Switch to 100k\n");
+	#if DEBUG > 0
+		uart_puts_P("Sw to 100k\n");
 	#endif
 
 	cli();
@@ -352,8 +352,8 @@ void switch_radio_to_100k_mode() {
 }
 
 void switch_radio_to_10k_mode() {
-	#if DEBUG == 1
-		uart_puts_P("Switch to 10k\n");
+	#if DEBUG > 0
+		uart_puts_P("Sw to 10k\n");
 	#endif
 
 	cli();
@@ -364,7 +364,7 @@ void switch_radio_to_10k_mode() {
 void flash_from_rf() {
 	timeoutCounter = 0;
 
-	#if DEBUG == 1
+	#if DEBUG > 0
 		uart_puts_P("Start receive firmware\n");
 	#endif
 
@@ -386,7 +386,7 @@ void flash_from_rf() {
 
 		hasData = 0;
 		if (data[7] != hmID[0] || data[8] != hmID[1] || data[9] != hmID[2]) {
-			#if DEBUG == 1
+			#if DEBUG > 0
 				uart_puts_P("Got data but not for us\n");
 			#endif
 
@@ -394,7 +394,7 @@ void flash_from_rf() {
 		}
 
 		if (data[3] != 0xCA) {
-			#if DEBUG == 1
+			#if DEBUG > 0
 				uart_puts_P("Got other msg type\n");
 			#endif
 
@@ -411,13 +411,13 @@ void flash_from_rf() {
 				pageCnt--;
 				state = 0;
 
-				#if DEBUG == 1
+				#if DEBUG > 0
 					uart_puts_P("Retransmit. Will reflash!\n");
 				#endif
 			} else {
 				state = 0;
 
-				#if DEBUG == 1
+				#if DEBUG > 0
 					uart_puts_P("FATAL: Wrong msgId detected!\n");
 				#endif
 			}
@@ -427,7 +427,7 @@ void flash_from_rf() {
 			blockLen = (data[10] << 8);											// Read len and check memory
 			blockLen += data[11];
 			if (blockLen != SPM_PAGESIZE) {
-				#if DEBUG == 1
+				#if DEBUG > 0
 					uart_puts_P("Block length differ with page size\n");
 				#endif
 
@@ -435,7 +435,7 @@ void flash_from_rf() {
 				continue;
 			}
 			if (data[0]-11 > SPM_PAGESIZE) {
-				#if DEBUG == 1
+				#if DEBUG > 0
 					uart_puts_P("Block to big\n");
 				#endif
 
@@ -448,7 +448,7 @@ void flash_from_rf() {
 
 		} else {
 			if (blockPos + data[0]-9 > blockLen) {
-				#if DEBUG == 1
+				#if DEBUG > 0
 					uart_puts_P("Got more data than block length\n");
 				#endif
 
@@ -461,14 +461,14 @@ void flash_from_rf() {
 		
 		if (data[2] == 0x20) {
 			if (blockPos != blockLen) {
-				#if DEBUG == 1
+				#if DEBUG > 0
 					uart_puts_P("Block length and block position do not match\n");
 				#endif
 
 				state = 0;
 				continue;
 			} else {
-				#if DEBUG == 1
+				#if DEBUG > 0
 					uart_puts_P("Block complete!\n");
 				#endif
 
@@ -486,8 +486,8 @@ void flash_from_rf() {
 				#endif
 			}
 
-			#if DEBUG == 1
-				//pHex(blockData, blockLen);
+			#if DEBUG > 1
+				pHex(blockData, blockLen);
 			#endif
 
 			send_ack(flasher_hmid, data[1]);

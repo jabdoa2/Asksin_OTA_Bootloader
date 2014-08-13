@@ -18,7 +18,11 @@
 #define DDR_STATUSLED        DDRD
 #define PIN_STATUSLED        4
 
-// set to 1 to activate debug info over UART
+
+/**
+ * set to 1 to activate debug info over UART
+ * set to 2 blockData and blockLen for each received block was printed
+ */
 #define DEBUG                1
 
 // Enable CRC Check before application start. Requires firmware to include CRC checksum at the end.
