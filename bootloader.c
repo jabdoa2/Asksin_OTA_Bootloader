@@ -2,8 +2,7 @@
 #include "config.h"
 
 #if DEBUG > 0
-//	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.5.1 \n\n"			// version number for debug info
-	#define VERSION_STRING       "\nV0.5.1\n\n"									// version number for debug info
+	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.5.1 \n\n"			// version number for debug info
 	#define BOOT_UART_BAUD_RATE  57600											// Baudrate
 #endif
 
@@ -38,7 +37,6 @@ int main() {
 
 	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 		bitSet(DDR_STATUSLED, PIN_STATUSLED);									// Set pin for LED as output
-
 		blinkLED();																// Blink status led indicating bootloader
 	#endif
 
@@ -49,8 +47,9 @@ int main() {
 	#endif
 	cc1101Init(CC1101_MODE_10k);												// Initialize cc1101 and go to standard 10k mode.
 
-		// init uart
-		uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) );
+
+	#if DEBUG > 0
+		uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) );				// init uart
 		uart_puts_P(VERSION_STRING);
 	#endif
 
@@ -58,12 +57,7 @@ int main() {
 	memcpy_P(&hmID, &hm_id[0], 3);
 	memcpy_P(&hmSerial, &hm_serial[0], 10);
 
-	switch_radio_to_10k_mode();													// go to standard 10k mode
-
-	blinkLED();																	// Blink status led again after init done
-
 	send_bootloader_sequence();													// send broadcast to allow windows tool or flash_ota to discover device
-
 	wait_for_CB_msg();															// wait for msg in 10k mode to change to 100k mode
 
 
@@ -72,8 +66,8 @@ int main() {
 	#endif
 	cc1101Init(CC1101_MODE_100k);												// Initialize cc1101 again and switch to 100k mode
 
-	wait_for_CB_msg();															// this is needed for windows tool
 
+	wait_for_CB_msg();															// this is needed for windows tool
 	flash_from_rf();															// run the actual flashing
 }
 
@@ -84,22 +78,25 @@ void setup_interrupts() {
 	/**
 	 * Setup interrupts for bootloder
 	 * map to correct interrupt table for bootloader
+	 * (Interrupt Vektoren auf Bootloader-Bereich verbiegen)
 	 */
-	unsigned char	temp;
-	/* Interrupt Vektoren verbiegen */
 	char sregtemp = SREG;
-//	cli();
-	temp = MCUCR;
-	MCUCR = temp | (1 << IVCE);
-	MCUCR = temp | (1 << IVSEL);
+
+	cli();
+	uint8_t temp = MCUCR;
+	MCUCR = temp | (1<<IVCE);													// Enable change of Interrupt Vectors
+	MCUCR = temp | (1<<IVSEL);													// Move interrupts to bootloader section
+
 	SREG = sregtemp;
 
-	 /**
-	  * Setup timer 0 for timeout counter
-	  */
+
+	/**
+	 * Setup timer 0 for timeout counter
+	 */
 	TCCR0B |= (1 << CS01) | (!(1 << CS00)) | (!(1 << CS02));					//PRESCALER 8
 	TCNT0 = 0;
 	TIMSK0 |= (1 << TOIE0);
+
 
 	/**
 	 * Setup interrupt for INT0 at GDO0 on CC1101, falling edge.
@@ -110,11 +107,9 @@ void setup_interrupts() {
 
 void program_page (uint32_t page, uint8_t *buf) {
 	uint16_t i;
-	uint8_t sreg;
+//	uint8_t sreg;
 
-	/* Disable interrupts */
-	sreg = SREG;
-	cli();
+	cli();																		// disable interrupts
 
 	eeprom_busy_wait ();
 
@@ -137,8 +132,7 @@ void program_page (uint32_t page, uint8_t *buf) {
 	 */
 	boot_rww_enable ();
 
-	SREG = sreg;																// Re-enable interrupts (if they were ever enabled).
-	sei();
+	sei();																		// Re-enable interrupts
 }
 
 void hm_enc(uint8_t *buffer) {
@@ -237,6 +231,7 @@ void send_ack_if_requested(uint8_t* msg) {
 		}
 		// augment
 		crc = updcrc(0, updcrc(0, crc));
+
 		return (pgm_read_word(CODE_LEN) == crc);
 	}
 
@@ -252,13 +247,13 @@ void send_ack_if_requested(uint8_t* msg) {
 
 			return;
 		}
-		wdt_reset();
-
 		#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 			bitSet(PORT_STATUSLED, PIN_STATUSLED);
 			_delay_ms(2000);
 			bitClear(PORT_STATUSLED, PIN_STATUSLED);
 		#endif
+
+		wdt_reset();
 
 		#if DEBUG > 0
 			uart_puts_P("CRC fail: Reboot\n");
@@ -271,7 +266,11 @@ void send_ack_if_requested(uint8_t* msg) {
 
 void startApplication() {
 	void (*start)( void ) = 0x0000;												// Funktionspointer auf 0x0000
-	unsigned char	temp;
+
+	#if DEBUG > 0
+		uart_puts_P("Start App\n");
+		_delay_ms(250);
+	#endif
 
 	/*
 	 * Vor Rücksprung eventuell benutzte Hardware deaktivieren
@@ -280,9 +279,9 @@ void startApplication() {
 
 	/* Interrupt Vektoren wieder gerade biegen */
 	cli();
-	temp = MCUCR;
-	MCUCR = temp | (1 << IVCE);
-	MCUCR = temp & ~(1 << IVSEL);
+	uint8_t temp = MCUCR;
+	MCUCR = temp | (1 << IVCE);													// Enable change of Interrupt Vectors
+	MCUCR = temp & ~(1 << IVSEL);												// Move interrupts to application section
 
 	start();																	// Rücksprung zur Adresse 0x0000
 }
@@ -290,7 +289,7 @@ void startApplication() {
 void startApplicationOnTimeout() {
 	if (timeoutCounter > 30000) {												// wait about 10s at 8Mhz
 		#if DEBUG > 0
-			uart_puts_P("Timeout. Start program!\n");
+			uart_puts_P("Timeout\n");
 			_delay_ms(250);
 		#endif
 
