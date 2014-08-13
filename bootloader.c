@@ -265,10 +265,6 @@ void wait_for_CB_msg() {
 
 	timeoutCounter = 0;															// reset timeout
 	while(1) {
-		#if DEBUG == 1
-			uart_getc();
-		#endif
-
 		startApplicationOnTimeout();
 
 		if(! hasData) {															// Wait for data
@@ -340,10 +336,6 @@ void flash_from_rf() {
 	uint16_t expectedMsgId = data[1] + 1;
 
 	while (1) {
-		#if DEBUG == 1
-			uart_getc();
-		#endif
-
 		startApplicationOnTimeout();
 
 		if(! hasData) {															// Wait for data
