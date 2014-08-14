@@ -8,7 +8,6 @@ Currently tested at Atmega328p, Atmega644 not tested yet.
 
 Prepare device:
 * Clone repository
-* The config.h is configured to the Atmega328p (HB-UW-Sen-THPL). For the HM-LC-Sw1PBU-FM with Atmega644 you must rename the config-Atmega644.h to config.h
 * Build source for HB-UW-Sen-THPL
 ```
 make HB_UW_Sen_THPL
