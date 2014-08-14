@@ -10,15 +10,15 @@ Prepare device:
 * Clone repository
 * Build source for HB-UW-Sen-THPL
 ```
-make HB_UW_Sen_THPL
+make clean HB_UW_Sen_THPL
 ```
 * Build source for HM-LC-Sw1PBU-FM
 ```
-make HM_LC_Sw1PBU_FM
+make clean HM_LC_Sw1PBU_FM
 ```
 * Build source for HM-LC-Sw1PBU-FM (8k Bootloader space)
 ```
-make HM_LC_Sw1PBU_FM_8k
+make clean HM_LC_Sw1PBU_FM_8k
 ```
 
 * Write fuses:
