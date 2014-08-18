@@ -21,11 +21,11 @@
 // Pin assignment for config button (without hold the config button the main programm starts immediately if CRC was correct)
 // config defines and enable lins below to use config button
 //
-//#define PORT_CONFIG_BTN      PORTB											// The Port B Data Register
-//#define DDR_CONFIG_BTN       DDRB												// The Port B Data Direction Register
-//#define INPUT_CONFIG_BTN     PINB												// The Port B Input Pins Address
-//#define PIN_CONFIG_BTN       0												// PB0 where the button sould connected (to ground)
-//#define WAIT_FOR_CONFIG      10												// wait x seconds after watchdog reset for press config button
+//#define PORT_CONFIG_BTN      PORTD											// The Port D Data Register
+//#define DDR_CONFIG_BTN       DDRD												// The Port D Data Direction Register
+//#define INPUT_CONFIG_BTN     PIND												// The Port D Input Pins Address
+//#define PIN_CONFIG_BTN       7												// PD7 where the button sould connected (to ground)
+//#define WAIT_FOR_CONFIG      10												// Wait 10 seconds after watchdog reset for press config button
 
 /**
  * set to 1 to activate debug info over UART
