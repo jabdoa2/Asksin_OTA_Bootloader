@@ -1,10 +1,11 @@
 Bidcos Bootloader for Atmega
 ============================
 
-Currently tested at Atmega328p, Atmega644 not tested yet.
+Currently tested at Atmega328p and Atmega644.
 
-* Tested on HB-UW-Sen-THPL (https://github.com/kc-GitHub/Wettersensor)
-* Not yest tested on HM-LC-Sw1PBU-FM. (https://github.com/jabdoa2/Asksin_HM_LC_Sw1PBU_FM)
+Tested on
+* HM-LC-Sw1PBU-FM. (https://github.com/jabdoa2/Asksin_HM_LC_Sw1PBU_FM)
+* HB-UW-Sen-THPL (https://github.com/kc-GitHub/Wettersensor)
 
 Prepare device:
 * Clone repository
@@ -12,6 +13,7 @@ Prepare device:
 ```
 make clean HB_UW_Sen_THPL
 ```
+
 * Build source for HM-LC-Sw1PBU-FM
 ```
 make clean HM_LC_Sw1PBU_FM
