@@ -35,9 +35,11 @@ const uint8_t hm_id[3]          ADDRESS_SECTION = {HM_ID};						// 3 bytes devic
 #endif
 
 int main() {
-	uint8_t watchdogReset = 0;
-	watchdogReset = bitRead(MCUSR, WDRF);										// is reset triggert from watchdog?
-
+	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined (INPUT_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
+		uint8_t watchdogReset = 0;
+		watchdogReset = bitRead(MCUSR, WDRF);										// is reset triggert from watchdog?
+    #endif
+	
 	MCUSR=0;																	// disable watchdog (used for software reset the device)
 	wdt_reset();
 	wdt_disable();

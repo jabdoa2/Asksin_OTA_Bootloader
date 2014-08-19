@@ -25,10 +25,12 @@ $spmPagesize = ($argc == 4) ? (int)$argv[3] : 256;
 $fhInfile = fopen($inFile, 'r');
 
 $out = '';
+$numPages=0;
 while(!feof($fhInfile)) {
 	$payload = fread($fhInfile, $spmPagesize);
+	if(strlen($payload)==0) continue;
+	$numPages++;
 	$out .= sprintf('%04X', $spmPagesize);
-
 	for($i = 0; $i < $spmPagesize; $i++) {
 		if ($i >= strlen($payload)) {
 			$out.= '00';
@@ -40,5 +42,5 @@ while(!feof($fhInfile)) {
 
 file_put_contents($outFile, $out);
 
-echo 'File "' . $outFile . '" was written with page size of ' . $spmPagesize . ' Bytes.' . LF;
+echo 'File "' . $outFile . '" was written with page size of ' . $spmPagesize . ' Bytes and a total of ' . $numPages . ' Pages.' . LF;
 

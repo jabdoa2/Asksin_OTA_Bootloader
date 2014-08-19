@@ -71,7 +71,7 @@ srec_cat <payload.hex> -intel -fill 0xFF 0x0000 0xEFFE -Cyclic_Redundancy_Check_
 
 * For 64k devices with 8k bootloader space like (Atmega644):
 ```
-srec_cat <payload.hex> -intel -fill 0xFF 0x0000 0xDEED -Cyclic_Redundancy_Check_16_Little_Endian 0xDEED -o  payload.bin -binary
+srec_cat <payload.hex> -intel -fill 0xFF 0x0000 0xDFFE -Cyclic_Redundancy_Check_16_Little_Endian 0xDFFE -o  payload.bin -binary
 ```
 
 * in both cases you end up with the binary, which has to go through the converter to get the EQ3 format
