@@ -14,10 +14,12 @@
  *        Address data section           *
  *           See Makefile                *
  *****************************************/
-#define ADDRESS_SECTION __attribute__ ((section (".addressData")))
-const uint8_t hm_Type[2]        ADDRESS_SECTION = {HM_TYPE};					// 2 bytes device type
-const uint8_t hm_serial[10]     ADDRESS_SECTION = {HM_SERIAL};					// 10 bytes serial number
-const uint8_t hm_id[3]          ADDRESS_SECTION = {HM_ID};						// 3 bytes device address
+#define ADDRESS_SECTION_TYPE   __attribute__ ((section (".addressDataType")))
+#define ADDRESS_SECTION_SERIAL __attribute__ ((section (".addressDataSerial")))
+#define ADDRESS_SECTION_ID     __attribute__ ((section (".addressDataId")))
+const uint8_t hm_Type[2]        ADDRESS_SECTION_TYPE   = {HM_TYPE};				// 2 bytes device type
+const uint8_t hm_serial[10]     ADDRESS_SECTION_SERIAL = {HM_SERIAL};			// 10 bytes serial number
+const uint8_t hm_id[3]          ADDRESS_SECTION_ID     = {HM_ID};				// 3 bytes device address
 
 #if DEBUG > 1
 	void pHexChar(const uint8_t val) {
@@ -37,8 +39,8 @@ const uint8_t hm_id[3]          ADDRESS_SECTION = {HM_ID};						// 3 bytes devic
 int main() {
 	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined (INPUT_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
 		uint8_t watchdogReset = 0;
-		watchdogReset = bitRead(MCUSR, WDRF);										// is reset triggert from watchdog?
-    #endif
+		watchdogReset = bitRead(MCUSR, WDRF);									// is reset triggert from watchdog?
+	#endif
 	
 	MCUSR=0;																	// disable watchdog (used for software reset the device)
 	wdt_reset();
