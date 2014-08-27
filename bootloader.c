@@ -434,7 +434,7 @@ void flash_from_rf() {
 	uint16_t blockLen = 0;
 	uint16_t blockPos = 0;
 	uint32_t pageCnt = 0;
-	uint16_t expectedMsgId = data[1] + 1;
+	uint8_t expectedMsgId = data[1] + 1;
 
 	while (1) {
 		startApplicationOnTimeout();
