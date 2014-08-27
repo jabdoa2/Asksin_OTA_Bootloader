@@ -2,7 +2,7 @@
 #include "config.h"
 
 #if DEBUG > 0
-	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.6 \n\n"			// version number for debug info
+	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.6.1\n\n"			// version number for debug info
 	#define BOOT_UART_BAUD_RATE  57600											// Baudrate
 #endif
 
