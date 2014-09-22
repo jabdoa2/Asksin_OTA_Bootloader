@@ -45,11 +45,11 @@
  *****************************************/
 
 // The model type
-#define HM_TYPE              0xF1, 0x01    // DIY (HB-UW-Sen-THPL-I)			// stored at 0x7FF0
+//#define HM_TYPE              0xF1, 0x01    // DIY (HB-UW-Sen-THPL-I)			// stored at 0x7FF0
+#define HM_TYPE              0x12, 0x34											// stored at 0x7FF0
 
 // 10 bytes serial number. Must be unique for each device
-//#define HM_SERIAL            'H','B','0','D','e','f','a','u','l','t'			// stored at 0x7FF2
-#define HM_SERIAL            'S','E','N','0','T','H','P','L','0','2'			// stored at 0x7FF2
+#define HM_SERIAL            'H','B','0','D','e','f','a','u','l','t'			// stored at 0x7FF2
 
 // 3 bytes The device address (hm_id)
-#define HM_ID                0x11, 0x22, 0x33									// stored at 0x7FFC
+#define HM_ID                0xAB, 0xCD, 0xEF									// stored at 0x7FFC
