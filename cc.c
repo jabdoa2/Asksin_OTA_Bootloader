@@ -126,13 +126,13 @@ void sendData(uint8_t *buf, uint8_t burst) {									// send data packet via RF
 	cmdStrobe(CC1101_SFRX );													// flush RX buffer
 	cmdStrobe(CC1101_SFTX );													// flush TX buffer
 	
-	if (burst) {																// BURST-bit set?
-		cmdStrobe(CC1101_STX  );												// send a burst
-		_delay_ms(200);														// according to ELV, devices get activated every 300ms, so send burst for 360ms
-		_delay_ms(160);
-	} else {
+// for Bootloader, we don't need burst
+//	if (burst) {																// BURST-bit set?
+//		cmdStrobe(CC1101_STX  );												// send a burst
+//		_delay_ms(360);															// according to ELV, devices get activated every 300ms, so send burst for 360ms
+//	} else {
 		_delay_ms(1);															// wait a short time to set TX mode
-	}
+//	}
 
 	writeBurst(CC1101_TXFIFO, buf, buf[0]+1);									// write in TX FIFO
 
@@ -175,51 +175,6 @@ uint8_t receiveData(uint8_t *buf) {												// read data packet from RX FIFO
 //	trx868.rfState = RFSTATE_RX;												// declare to be in Rx state
 	
 	return buf[0];																// return the data buffer
-}
-
-uint8_t detectBurst(void) {														// wake up CC1101 from power down state
-	/*
-	 * 10 7/10 5 in front of the received string; 33 after received string
-	 * 10 - 00001010 - sync word found
-	 * 7  - 00000111 - GDO0 = 1, GDO2 = 1
-	 * 5  - 00000101 - GDO0 = 1, GDO2 = 1
-	 * 33 - 00100001 - GDO0 = 1, preamble quality reached
-	 * 96 - 01100000 - burst sent
-	 * 48 - 00110000 - in receive mode
-	 *
-	 * Status byte table:
-	 *  0 current GDO0 value
-	 *  1 reserved
-	 *  2 GDO2
-	 *  3 sync word found
-	 *  4 channel is clear
-	 *  5 preamble quality reached
-	 *  6 carrier sense
-	 *  7 CRC ok
-	 *
-	 * possible solution for finding a burst is to check for bit 6, carrier sense
-
-	 * set RXTX module in receive mode
-	 */
-	cc1101_Select();															// select CC1101
-	wait_Miso();																// wait until MISO goes low
-	cc1101_Deselect();															// deselect CC1101
-	cmdStrobe(CC1101_SRX);														// set RX mode again
-	_delay_ms(3);																// wait a short time to set RX mode
-	
-	// todo: check carrier sense for 5ms to avoid wakeup due to normal transmition
-	return bitRead(monitorStatus(),6);											// return the detected signal
-}
-
-void setPowerDownxtStatte() {													// put CC1101 into power-down state
-	cmdStrobe(CC1101_SIDLE);													// coming from RX state, we need to enter the IDLE state first
-	cmdStrobe(CC1101_SFRX);
-	cmdStrobe(CC1101_SPWD);														// enter power down state
-	//Serial << "pd\n";
-}
-
-uint8_t monitorStatus() {
-	return readReg(CC1101_PKTSTATUS, CC1101_STATUS);
 }
 
 uint8_t sendSPI(uint8_t val) {													// send byte via SPI

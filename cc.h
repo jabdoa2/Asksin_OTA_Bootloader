@@ -108,9 +108,6 @@ struct s_trx868 {																// TRX868 communication variables
 void cc1101Init(uint8_t mode100k);
 void sendData(uint8_t *buf, uint8_t burst);
 uint8_t receiveData(uint8_t *buf);
-uint8_t detectBurst(void);
-void setPowerDownxtStatte();
-uint8_t monitorStatus();
 uint8_t sendSPI(uint8_t val);
 void cmdStrobe(uint8_t cmd);
 void writeBurst(uint8_t regAddr, uint8_t *buf, uint8_t len);

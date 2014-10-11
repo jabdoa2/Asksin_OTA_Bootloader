@@ -2,13 +2,20 @@
 #include "config.h"
 
 #if DEBUG > 0
-	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.6.1\n\n"			// version number for debug info
-	#define BOOT_UART_BAUD_RATE  57600											// Baudrate
+	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.6.2\n\n"			// version number for debug info
+#endif
+
+#if DEBUG > 1
+	#define BOOT_UART_BAUD_RATE  115200			// Baudrate
+#elif DEBUG > 0
+	#define BOOT_UART_BAUD_RATE  57600			// Baudrate
 #endif
 
 #ifndef WAIT_FOR_CONFIG
 	#define WAIT_FOR_CONFIG = 10
 #endif
+
+const char dataNotForUs[] = "Data not for us\n";
 
 /*****************************************
  *        Address data section           *
@@ -22,17 +29,25 @@ const uint8_t hm_serial[10]     ADDRESS_SECTION_SERIAL = {HM_SERIAL};			// 10 by
 const uint8_t hm_id[3]          ADDRESS_SECTION_ID     = {HM_ID};				// 3 bytes device address
 
 #if DEBUG > 1
-	void pHexChar(const uint8_t val) {
-		const char hexDigits[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-		uart_putc(hexDigits[val >> 4]);
-		uart_putc(hexDigits[val & 0xF]);
-	}
 
 	void pHex(const uint8_t *buf, uint8_t len) {
-		for (uint16_t i=0; i < len; i++) {
-			pHexChar(buf[i]);
+		const char hexDigits[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+
+		for (uint8_t i=0; i < len; i++) {
+			uart_putc(hexDigits[buf[i] >> 4]);
+			uart_putc(hexDigits[buf[i] & 0xF]);
+			uart_puts_P(" ");
 		}
-		uart_putc(' ');
+	}
+
+	void debugData(const uint8_t *buf, uint8_t tx) {
+		if (tx) {
+			uart_puts("TX: ");
+		} else {
+			uart_puts("RX: ");
+		}
+		pHex(buf, buf[0]);
+		uart_puts_P("\n");
 	}
 #endif
 
@@ -75,7 +90,7 @@ int main() {
 		#endif
 
 		if (watchdogReset && crcOk) {
-			uart_puts_P("Wait some seconds for config button\n");
+			uart_puts_P("Wait few seconds for config btn\n");
 			uint16_t waitForButton = 0;
 
 			/**
@@ -299,7 +314,6 @@ void send_ack_if_requested(uint8_t* msg) {
 		if(crc_app_ok()){
 			#if DEBUG > 0
 				uart_puts_P("CRC OK\n");
-				_delay_ms(250);
 			#endif
 
 			return;
@@ -311,7 +325,7 @@ void send_ack_if_requested(uint8_t* msg) {
 		wdt_reset();
 
 		#if DEBUG > 0
-			uart_puts_P("CRC fail: Reboot\n");
+			uart_puts_P("CRC fail: Boot\n");
 		#endif
 
 		wdt_enable(WDTO_1S);
@@ -348,7 +362,6 @@ void startApplicationOnTimeout() {
 	if (timeoutCounter > 30000) {												// wait about 10s at 8Mhz
 		#if DEBUG > 0
 			uart_puts_P("Timeout\n");
-			_delay_ms(250);
 		#endif
 
 		#if CRC_FLASH == 1
@@ -378,6 +391,10 @@ void send_bootloader_sequence() {
 		hmSerial[5], hmSerial[6], hmSerial[7], hmSerial[8], hmSerial[9]
 	};
 
+	#if DEBUG > 1
+		debugData(msg, 1);
+	#endif
+
 	send_hm_data(msg);
 }
 
@@ -395,6 +412,9 @@ void wait_for_CB_msg() {
 		}
 		
 		hm_dec(data);
+		#if DEBUG > 1
+			debugData(data, 0);
+		#endif
 
 		hasData = 0;
 		if (data[7] != hmID[0] || data[8] != hmID[1] || data[9] != hmID[2]) {
@@ -436,7 +456,14 @@ void flash_from_rf() {
 	uint16_t blockLen = 0;
 	uint16_t blockPos = 0;
 	uint32_t pageCnt = 0;
-	uint8_t expectedMsgId = data[1] + 1;
+	uint8_t expectedMsgIdOffset = 1;
+
+	if (data[0] >= 17) {
+		// spechial for update with ccu
+		expectedMsgIdOffset+= data[17];
+	}
+
+	uint8_t expectedMsgId = data[1] + expectedMsgIdOffset;
 
 	while (1) {
 		startApplicationOnTimeout();
@@ -450,7 +477,7 @@ void flash_from_rf() {
 		hasData = 0;
 		if (data[7] != hmID[0] || data[8] != hmID[1] || data[9] != hmID[2]) {
 			#if DEBUG > 0
-				uart_puts_P("Got data but not for us\n");
+				uart_puts_p(dataNotForUs);
 			#endif
 
 			continue;
@@ -463,6 +490,10 @@ void flash_from_rf() {
 
 			continue;
 		}
+
+		#if DEBUG > 1
+			debugData(data, 0);
+		#endif
 
 		if (data[1] != expectedMsgId) {
 			if (data[1] == expectedMsgId + 1 && pageCnt > 0) {
@@ -491,7 +522,7 @@ void flash_from_rf() {
 			blockLen += data[11];
 			if (blockLen != SPM_PAGESIZE) {
 				#if DEBUG > 0
-					uart_puts_P("Block length differ with page size\n");
+					uart_puts_P("blockLen != pageSize\n");
 				#endif
 
 				state = 0;
@@ -512,7 +543,7 @@ void flash_from_rf() {
 		} else {
 			if (blockPos + data[0]-9 > blockLen) {
 				#if DEBUG > 0
-					uart_puts_P("Got more data than block length\n");
+					uart_puts_P("Data size > blockLen\n");
 				#endif
 
 				state = 0;
@@ -525,7 +556,7 @@ void flash_from_rf() {
 		if (data[2] == 0x20) {
 			if (blockPos != blockLen) {
 				#if DEBUG > 0
-					uart_puts_P("Block length and block position do not match\n");
+					uart_puts_P("blockLen and blockPos not match\n");
 				#endif
 
 				state = 0;
@@ -549,12 +580,22 @@ void flash_from_rf() {
 				#endif
 			}
 
-			#if DEBUG > 1
-				pHex(blockData, blockLen);
-			#endif
+			//#if DEBUG > 1
+			//	pHex(blockData, blockLen);
+			//#endif
 
 			send_ack(flasher_hmid, data[1]);
+
 			state = 0;
+		}
+
+		if (state == 0) {
+			expectedMsgId = data[1] + expectedMsgIdOffset;
+			
+			// spechial for update with ccu
+			if (expectedMsgIdOffset > 1 && expectedMsgId >= 0x80) {
+				expectedMsgId = expectedMsgId ^ 0x80;
+			}
 		}
 	}
 }

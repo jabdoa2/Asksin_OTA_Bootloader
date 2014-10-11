@@ -42,6 +42,8 @@ ISR(TIMER0_OVF_vect);
 #if DEBUG > 1
 	void pHexChar(const uint8_t val);
 	void pHex(const uint8_t *buf, uint8_t len);
+
+	void debugData(const uint8_t *buf, uint8_t dir);
 #endif
 
 #if CRC_FLASH == 1
