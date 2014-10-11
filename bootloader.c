@@ -7,7 +7,7 @@
 
 #if DEBUG > 1
 	#define BOOT_UART_BAUD_RATE  115200			// Baudrate
-#elif DEBUG > 0
+#else
 	#define BOOT_UART_BAUD_RATE  57600			// Baudrate
 #endif
 
@@ -28,8 +28,9 @@ const uint8_t hm_Type[2]        ADDRESS_SECTION_TYPE   = {HM_TYPE};				// 2 byte
 const uint8_t hm_serial[10]     ADDRESS_SECTION_SERIAL = {HM_SERIAL};			// 10 bytes serial number
 const uint8_t hm_id[3]          ADDRESS_SECTION_ID     = {HM_ID};				// 3 bytes device address
 
-#if DEBUG > 1
+uint8_t expectedMsgIdOffset;
 
+#if DEBUG > 1
 	void pHex(const uint8_t *buf, uint8_t len) {
 		const char hexDigits[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
@@ -433,6 +434,11 @@ void wait_for_CB_msg() {
 				uart_puts_P("Got msg to start config\n");
 			#endif
 
+			if (data[0] >= 17) {
+				// spechial for update with ccu
+				expectedMsgIdOffset = data[17];
+			}
+
 			flasher_hmid[0] = data[4];
 			flasher_hmid[1] = data[5];
 			flasher_hmid[2] = data[6];
@@ -456,14 +462,8 @@ void flash_from_rf() {
 	uint16_t blockLen = 0;
 	uint16_t blockPos = 0;
 	uint32_t pageCnt = 0;
-	uint8_t expectedMsgIdOffset = 1;
 
-	if (data[0] >= 17) {
-		// spechial for update with ccu
-		expectedMsgIdOffset+= data[17];
-	}
-
-	uint8_t expectedMsgId = data[1] + expectedMsgIdOffset;
+	uint8_t expectedMsgId = data[1] + expectedMsgIdOffset + 1;
 
 	while (1) {
 		startApplicationOnTimeout();
@@ -590,7 +590,7 @@ void flash_from_rf() {
 		}
 
 		if (state == 0) {
-			expectedMsgId = data[1] + expectedMsgIdOffset;
+			expectedMsgId = data[1] + expectedMsgIdOffset + 1;
 			
 			// spechial for update with ccu
 			if (expectedMsgIdOffset > 1 && expectedMsgId >= 0x80) {
