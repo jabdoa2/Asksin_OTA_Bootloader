@@ -52,6 +52,10 @@ uint8_t expectedMsgIdOffset;
 	}
 #endif
 
+/**
+ * The bootloader main methode.
+ * Here we initialize all required stuff.
+ */
 int main() {
 	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined (INPUT_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
 		uint8_t watchdogReset = 0;
@@ -73,7 +77,6 @@ int main() {
 		uart_puts_P("Sw to 10k\n");
 	#endif
 	cc1101Init(CC1101_MODE_10k);												// Initialize cc1101 and go to standard 10k mode.
-
 
 	#if DEBUG > 0
 		uart_init( UART_BAUD_SELECT(BOOT_UART_BAUD_RATE,F_CPU) );				// init uart
@@ -111,7 +114,7 @@ int main() {
 		}
 
 		/**
-		 * Check config button pressed after reset, then start bootloader. Else start application.
+		 * Check if config button pressed after power on reset or a watchdog reset was triggert, then start bootloader. Else start application.
 		 */
 		if( bitRead(INPUT_CONFIG_BTN, PIN_CONFIG_BTN) ) {						// check if button not pressed (button must be at high level)
 			#if CRC_FLASH == 1
@@ -129,19 +132,19 @@ int main() {
 		blinkLED(25, 200);														// Blink status led again after init done
 	#endif
 
-	// we must copy the adress data from program space first
+	// we must copy the address data from program space first
 	memcpy_P(&hmID, &hm_id[0], 3);
 	memcpy_P(&hmSerial, &hm_serial[0], 10);
 
-	send_bootloader_sequence();													// send broadcast to allow windows tool or flash_ota to discover device
-	wait_for_CB_msg();															// wait for msg in 10k mode to change to 100k mode
+	send_bootloader_sequence();													// send broadcast to allow the ccu2, windows tool or flash_ota to discover device
+	wait_for_CB_msg();															// wait for message in 10k mode to change to 100k mode
 
 	#if DEBUG > 0
 		uart_puts_P("Sw to 100k\n");
 	#endif
 	cc1101Init(CC1101_MODE_100k);												// Initialize cc1101 again and switch to 100k mode
 
-	wait_for_CB_msg();															// this is needed for windows tool
+	wait_for_CB_msg();															// wait again for CB message
 	flash_from_rf();															// run the actual flashing
 }
 
@@ -163,14 +166,12 @@ void setup_interrupts() {
 
 	SREG = sregtemp;
 
-
 	/**
 	 * Setup timer 0 for timeout counter
 	 */
 	TCCR0B |= (1 << CS01) | (!(1 << CS00)) | (!(1 << CS02));					//PRESCALER 8
 	TCNT0 = 0;
 	TIMSK0 |= (1 << TOIE0);
-
 
 	/**
 	 * Setup interrupt for INT0 at GDO0 on CC1101, falling edge.
@@ -179,6 +180,9 @@ void setup_interrupts() {
 	EICRA = 1 << ISC01 | 0 << ISC00;											// falling edge
 }
 
+/**
+ * Program a page of the program memory
+ */
 void program_page (uint32_t page, uint8_t *buf) {
 	uint16_t i;
 
@@ -208,6 +212,9 @@ void program_page (uint32_t page, uint8_t *buf) {
 	sei();																		// re-enable interrupts
 }
 
+/**
+ * Encode data for sending
+ */
 void hm_enc(uint8_t *buffer) {
 
 	buffer[1] = (~buffer[1]) ^ 0x89;
@@ -223,9 +230,13 @@ void hm_enc(uint8_t *buffer) {
 	buffer[i] ^= buf2;
 }
 
+/*
+ * Decode data after receiving.
+ */
 void hm_dec(uint8_t *buffer) {
 	uint8_t prev = buffer[1];
 	buffer[1] = (~buffer[1]) ^ 0x89;
+
 
 	uint8_t i, t;
 	for (i = 2; i < buffer[0]; i++) {
@@ -237,6 +248,9 @@ void hm_dec(uint8_t *buffer) {
 	buffer[i] ^= buffer[2];
 }
 
+/**
+ * Do encode and trigger send data
+ */
 void send_hm_data(uint8_t *msg) {
 	hm_enc(msg);
 	cli();
@@ -319,6 +333,8 @@ void send_ack_if_requested(uint8_t* msg) {
 
 			return;
 		}
+
+		// At this point we have a CRC failure. We reboot the device
 		#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 			blinkLED(2000, 1);													// blink led
 		#endif
@@ -334,6 +350,9 @@ void send_ack_if_requested(uint8_t* msg) {
 	}
 #endif 
 
+/**
+ * Start the main application
+ */
 void startApplication() {
 	void (*start)( void ) = 0x0000;												// Funktionspointer auf 0x0000
 
@@ -343,14 +362,14 @@ void startApplication() {
 	#endif
 
 	/*
-	 * Vor Rücksprung eventuell benutzte Hardware deaktivieren
-	 * und Interrupts global deaktivieren, da kein "echter" Reset erfolgt
+	 * deactivate used hardware and global deactivate interrupts. Because, this is no real reset.
 	 */
 	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined(INPUT_CONFIG_BTN) && (PIN_CONFIG_BTN)
 		bitClear(PORT_CONFIG_BTN, PIN_CONFIG_BTN);								// reset pullup
 	#endif
 
-	/* Interrupt Vektoren wieder gerade biegen */
+
+	// Restore interrupt vectors
 	cli();
 	uint8_t temp = MCUCR;
 	MCUCR = temp | (1 << IVCE);													// Enable change of Interrupt Vectors
@@ -359,6 +378,10 @@ void startApplication() {
 	start();																	// Rücksprung zur Adresse 0x0000
 }
 
+/**
+ * Check for timeout.
+ * If timeout reached, start the main application
+ */
 void startApplicationOnTimeout() {
 	if (timeoutCounter > 30000) {												// wait about 10s at 8Mhz
 		#if DEBUG > 0
@@ -376,15 +399,18 @@ void startApplicationOnTimeout() {
 	}
 }
 
+/**
+ * Send the bootloader sequence to broadcast to inform a waiting CCU or flash application.
+ */
 void send_bootloader_sequence() {
 	#if DEBUG > 0
 		uart_puts_P("TX: bootloader sequence\n");
 	#endif
 
 	/*
-	 *                                 HM_ID                         HM_SERIAL
-	 *                               |--------|           |-----------------------------|
-	 * Send this message: 14 00 00 10 23 25 B7 00 00 00 00 41 42 43 44 45 46 47 48 49 50
+	 *                                     SourceId TargetId            HM_SERIAL
+	 *                                    |--------|--------|  |-----------------------------|
+	 * Send this message like: 14 00 00 10 AB CD EF 00 00 00 00 41 42 43 44 45 46 47 48 49 50
 	 */
 	uint8_t msg[21] = {
 		0x14, 0x00, 0x00, 0x10, hmID[0], hmID[1], hmID[2], 0x00, 0x00, 0x00, 0x00,
@@ -399,6 +425,9 @@ void send_bootloader_sequence() {
 	send_hm_data(msg);
 }
 
+/*
+ * Wait for a CB message
+ */
 void wait_for_CB_msg() {
 	#if DEBUG > 0
 		uart_puts_P("Wait for CB Msg\n");
@@ -408,7 +437,7 @@ void wait_for_CB_msg() {
 	while(1) {
 		startApplicationOnTimeout();
 
-		if(! hasData) {															// Wait for data
+		if( !hasData ) {														// Wait for data
 			continue;
 		}
 		
@@ -426,9 +455,7 @@ void wait_for_CB_msg() {
 			continue;
 		}
 
-		/*
-		 * Wait for: 0F 01 00 CB 1A B1 50 AB CD EF 10 5B 11 F8 15 47
-		 */
+		// Wait for a CB message like: 0F 01 00 CB 11 22 33 AB CD EF 10 5B 11 F8 15 47
 		if (data[3] == 0xCB) {
 			#if DEBUG > 0
 				uart_puts_P("Got msg to start config\n");
@@ -450,6 +477,9 @@ void wait_for_CB_msg() {
 	}
 }
 
+/**
+ * Here we retrieve the firmware data and flash it into the flash memory
+ */
 void flash_from_rf() {
 	timeoutCounter = 0;
 
@@ -457,18 +487,19 @@ void flash_from_rf() {
 		uart_puts_P("Start receive firmware\n");
 	#endif
 
-	uint8_t state = 0;															// 0 = block has not started yet, 1 = block started
-	uint8_t blockData[SPM_PAGESIZE];
+	uint8_t state = 0;															// 0 = block has not started, 1 = block started
+	uint8_t blockData[SPM_PAGESIZE];											// buffer to store the data of a whole memory page
 	uint16_t blockLen = 0;
 	uint16_t blockPos = 0;
 	uint32_t pageCnt = 0;
 
 	uint8_t expectedMsgId = data[1] + expectedMsgIdOffset + 1;
 
+
 	while (1) {
 		startApplicationOnTimeout();
 
-		if(! hasData) {															// Wait for data
+		if(! hasData ) {														// Wait for data
 			continue;
 		}
 		
@@ -499,7 +530,7 @@ void flash_from_rf() {
 			if (data[1] == expectedMsgId + 1 && pageCnt > 0) {
 
 				/*
-				 * The other side may have missed our ack. It will resend the last block
+				 * The other side may have missed our ACK. It will re send the last block
 				 */
 				expectedMsgId--;
 				pageCnt--;
@@ -508,6 +539,7 @@ void flash_from_rf() {
 				#if DEBUG > 0
 					uart_puts_P("Retransmit. Will reflash!\n");
 				#endif
+
 			} else {
 				state = 0;
 
@@ -518,7 +550,7 @@ void flash_from_rf() {
 		}
 
 		if (state == 0) {
-			blockLen = (data[10] << 8);											// Read len and check memory
+			blockLen = (data[10] << 8);											// Read block length and check memory
 			blockLen += data[11];
 			if (blockLen != SPM_PAGESIZE) {
 				#if DEBUG > 0
@@ -536,6 +568,7 @@ void flash_from_rf() {
 				state = 0;
 				continue;
 			}
+
 			state = 1;
 			blockPos = data[0]-11;
 			memcpy(&blockData, &data[12], data[0]-11);
@@ -549,11 +582,12 @@ void flash_from_rf() {
 				state = 0;
 				continue;
 			}
+
 			memcpy(&blockData[blockPos], &data[10], data[0]-9);
 			blockPos += data[0]-9;
 		}
 		
-		if (data[2] == 0x20) {
+		if (data[2] == 0x20) {													// last data for current block
 			if (blockPos != blockLen) {
 				#if DEBUG > 0
 					uart_puts_P("blockLen and blockPos not match\n");
@@ -561,6 +595,7 @@ void flash_from_rf() {
 
 				state = 0;
 				continue;
+
 			} else {
 				#if DEBUG > 0
 					uart_puts_P(".");											// Block complete
@@ -592,7 +627,10 @@ void flash_from_rf() {
 		if (state == 0) {
 			expectedMsgId = data[1] + expectedMsgIdOffset + 1;
 			
-			// spechial for update with ccu
+			/**
+			 * Spechial for update with CCU
+			 * The message counter overflows at 0x80 if the CCU deliver the update
+			 */
 			if (expectedMsgIdOffset > 1 && expectedMsgId >= 0x80) {
 				expectedMsgId = expectedMsgId ^ 0x80;
 			}
@@ -600,6 +638,7 @@ void flash_from_rf() {
 	}
 }
 
+// Status-LED relatedt functions
 #if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 	/*
 	 * Let the led blinks 1 time
@@ -608,7 +647,7 @@ void flash_from_rf() {
 		bitSet(PORT_STATUSLED, PIN_STATUSLED);									// Status-LED on
 		while(onTime > 0) {_delay_ms(1); onTime--; }
 
-		bitClear(PORT_STATUSLED, PIN_STATUSLED);								// Status-LED on
+		bitClear(PORT_STATUSLED, PIN_STATUSLED);								// Status-LED off
 		while(offTime > 0) {_delay_ms(1); offTime--; }
 	}
 #endif
@@ -618,9 +657,11 @@ void flash_from_rf() {
  */
 ISR(INT0_vect) {
 	cli();
-	if (receiveData(data)) {
+	
+	if (receiveData(recData)) {
 		hasData = 1;
 	}
+	
 	sei();
 }
 
