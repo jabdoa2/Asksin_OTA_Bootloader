@@ -17,7 +17,7 @@ uint16_t timeoutCounter = 0;
 
 int main();
 void setup_interrupts();
-void program_page (uint32_t page, uint8_t *buf);
+void programPage (uint32_t pageAddr, uint8_t *buf);
 void hmEncode(uint8_t *buffer);
 void hmDecode(uint8_t *buffer);
 void hmSendData(uint8_t *msg);

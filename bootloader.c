@@ -41,7 +41,7 @@ uint8_t expectedMsgIdOffset;
 		} else {
 			uart_puts("RX: ");
 		}
-		pHex(buf, buf[0]);
+		pHex(buf, buf[0]+1);
 		uart_puts_P("\n");
 	}
 #endif
@@ -157,24 +157,30 @@ void setup_interrupts() {
 /**
  * Program a page of the program memory
  */
-void program_page (uint32_t page, uint8_t *buf) {
-	uint16_t i;
+void programPage (uint32_t pageAddr, uint8_t *buf) {
+	if (pageAddr > CODE_END+1 - SPM_PAGESIZE) {
+		#if DEBUG > 0
+			uart_puts_P("pageAddr exceeds available flash memory\n");
+		#endif
+
+		return;
+	}
 
 	cli();																		// disable interrupts
 
 	eeprom_busy_wait ();
 
-	boot_page_erase (page);
+	boot_page_erase (pageAddr);													// we must erase the page before
 	boot_spm_busy_wait ();														// Wait until the memory is erased.
 
-	for (i=0; i < SPM_PAGESIZE; i+=2) {
-		uint16_t w = *buf++;													// Set up little-endian word.
-		w += (*buf++) << 8;
+	for (uint16_t i = 0; i < SPM_PAGESIZE; i+= 2) {
+		uint16_t word = *buf++;													// Set up little-endian word.
+		word += (*buf++) << 8;
 
-		boot_page_fill (page + i, w);
+		boot_page_fill (pageAddr + i, word);
 	}
 
-	boot_page_write (page);														// Store buffer in flash page.
+	boot_page_write (pageAddr);													// Store buffer in flash page.
 	boot_spm_busy_wait();														// Wait until the memory is written.
 
 	/*
@@ -577,8 +583,9 @@ void flash_from_rf() {
 					bitSet(PORT_STATUSLED, PIN_STATUSLED);						// Status-LED on
 				#endif
 
-				program_page(pageCnt * SPM_PAGESIZE, blockData);
-				pageCnt++;
+				// here we flash the page into memory
+				programPage(pageCount * SPM_PAGESIZE, blockData);
+				pageCount++;
 				expectedMsgId++;
 				timeoutCounter = 0;
 
