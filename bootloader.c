@@ -195,8 +195,7 @@ void program_page (uint32_t page, uint8_t *buf) {
 /**
  * Encode data for sending
  */
-void hm_enc(uint8_t *buffer) {
-
+void hmEncode(uint8_t *buffer) {
 	buffer[1] = (~buffer[1]) ^ 0x89;
 	uint8_t buf2 = buffer[2];
 	uint8_t prev = buffer[1];
@@ -213,7 +212,7 @@ void hm_enc(uint8_t *buffer) {
 /*
  * Decode data after receiving.
  */
-void hm_dec(uint8_t *buffer) {
+void hmDecode(uint8_t *buffer) {
 	uint8_t prev = buffer[1];
 	buffer[1] = (~buffer[1]) ^ 0x89;
 
@@ -231,8 +230,8 @@ void hm_dec(uint8_t *buffer) {
 /**
  * Do encode and trigger send data
  */
-void send_hm_data(uint8_t *msg) {
-	hm_enc(msg);
+void hmSendData(uint8_t *msg) {
+	hmEncode(msg);
 	cli();
 	sendData(msg, 0);
 	sei();
@@ -240,12 +239,12 @@ void send_hm_data(uint8_t *msg) {
 
 void send_ack(uint8_t *receiver, uint8_t messageId) {
 	uint8_t ack_msg[11] = { 10, messageId, 0x80, 0x02, hmID[0], hmID[1], hmID[2], receiver[0], receiver[1], receiver[2], 0x00};
-	send_hm_data(ack_msg);	
+	hmSendData(ack_msg);
 }
 
 void send_nack_to_msg(uint8_t *msg) {
 	uint8_t nack_msg[11] = { 10, msg[1], 0x80, 0x02, hmID[0], hmID[1], hmID[2], msg[4], msg[5], msg[6], 0x80};
-	send_hm_data(nack_msg);	
+	hmSendData(nack_msg);
 }
 
 void send_ack_if_requested(uint8_t* msg) {
@@ -421,7 +420,8 @@ void wait_for_CB_msg() {
 			continue;
 		}
 		
-		hm_dec(data);
+
+		hmDecode(data);
 		#if DEBUG > 1
 			debugData(data, 0);
 		#endif
@@ -481,7 +481,7 @@ void flash_from_rf() {
 			continue;
 		}
 		
-		hm_dec(data);
+		hmDecode(data);
 
 		hasData = 0;
 		if (data[7] != hmID[0] || data[8] != hmID[1] || data[9] != hmID[2]) {
