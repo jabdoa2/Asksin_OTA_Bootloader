@@ -192,78 +192,78 @@ void programPage (uint32_t pageAddr, uint8_t *buf) {
 	sei();																		// re-enable interrupts
 }
 
-/**
- * Encode data for sending
+/*
+ * Check for data and decode data.
  */
-void hmEncode(uint8_t *buffer) {
-	buffer[1] = (~buffer[1]) ^ 0x89;
-	uint8_t buf2 = buffer[2];
-	uint8_t prev = buffer[1];
+uint8_t hmCheckAndDecodeData() {
+	if ( !hasData ) {
+		// no data received jet
+		return 0;
+	}
+
+	cli();
+
+	uint8_t areDataForUs = 0;
+	hasData = 0;
+
+	data[0] = recData[0];
+	data[1] = (~recData[1]) ^ 0x89;
 
 	uint8_t i;
-	for (i=2; i<buffer[0]; i++) {
-		prev = (prev + 0xdc) ^ buffer[i];
-		buffer[i] = prev;
+	for (i = 2; i < recData[0]; i++) {
+		data[i] = (recData[i-1] + 0xDC) ^ recData[i];
+
+		// Check if data for us
+		if (i >= 7 && i <= 9) {
+			areDataForUs = (data[i] == hmID[i-7]);
+			if (!areDataForUs) {
+				break;
+			}
+		}
 	}
+	data[i] = recData[i] ^ data[2];
 
-	buffer[i] ^= buf2;
-}
+	sei();
 
-/*
- * Decode data after receiving.
- */
-void hmDecode(uint8_t *buffer) {
-	uint8_t prev = buffer[1];
-	buffer[1] = (~buffer[1]) ^ 0x89;
+	if (areDataForUs) {
+		#if DEBUG > 1
+			debugData(data, 0);
+		#endif
 
+		return 1;
 
-	uint8_t i, t;
-	for (i = 2; i < buffer[0]; i++) {
-		t = buffer[i];
-		buffer[i] = (prev + 0xdc) ^ buffer[i];
-		prev = t;
+	} else {
+		#if DEBUG > 1
+			uart_puts_P("Data not for us\n");
+		#endif
+
+		// Data not for us
+		return 0;
 	}
-
-	buffer[i] ^= buffer[2];
 }
 
 /**
- * Do encode and trigger send data
+ * Encode data for sending and call sendData
  */
-void hmSendData(uint8_t *msg) {
-	hmEncode(msg);
+void hmEncodeAndSendData(uint8_t *msg) {
+	msg[1] = (~msg[1]) ^ 0x89;
+	uint8_t buf2 = msg[2];
+	uint8_t prev = msg[1];
+
+	uint8_t i;
+	for (i=2; i<msg[0]; i++) {
+		prev = (prev + 0xdc) ^ msg[i];
+		msg[i] = prev;
+	}
+
+	msg[i] ^= buf2;
+
 	cli();
 	sendData(msg, 0);
 	sei();
 }
 
-void send_ack(uint8_t *receiver, uint8_t messageId) {
-	uint8_t ack_msg[11] = { 10, messageId, 0x80, 0x02, hmID[0], hmID[1], hmID[2], receiver[0], receiver[1], receiver[2], 0x00};
-	hmSendData(ack_msg);
-}
 
-void send_nack_to_msg(uint8_t *msg) {
-	uint8_t nack_msg[11] = { 10, msg[1], 0x80, 0x02, hmID[0], hmID[1], hmID[2], msg[4], msg[5], msg[6], 0x80};
-	hmSendData(nack_msg);
-}
-
-void send_ack_if_requested(uint8_t* msg) {
-	if (! (msg[2] & (1 << 5))) {
-		// no ack requested
-		return;
-	}
-	
-	#if DEBUG > 0
-		uart_puts_P("TX: ACK\n");
-	#endif
-
-	// send ack to sender of msg
-	uint8_t ack_hmid[3];
-	ack_hmid[0] = msg[4];
-	ack_hmid[1] = msg[5];
-	ack_hmid[2] = msg[6];
-	send_ack(ack_hmid, msg[1]);
-}
 
 // CRC check related functions
 #if CRC_FLASH == 1
@@ -331,6 +331,28 @@ void send_ack_if_requested(uint8_t* msg) {
 #endif
 
 /**
+ * Send response (ACK or NACK)
+ * We will send ACK only if requested
+ */
+void sendResponse(uint8_t *msg, uint8_t type) {
+
+	if (type == MSG_RESPONSE_TYPE_ACK) {
+		if ( !(msg[2] & 0x20) ) {
+			// no ACK required
+			return;
+		}
+
+		#if DEBUG > 0
+			uart_puts_P("Send ACK\n");
+		#endif
+	}
+
+	uint8_t responseMsg[11] = { 10, msg[1], 0x80, 0x02, hmID[0], hmID[1], hmID[2], msg[4], msg[5], msg[6], type};
+
+	hmEncodeAndSendData(responseMsg);
+}
+
+/**
  * Start the main application
  */
 void startApplication() {
@@ -384,7 +406,7 @@ void startApplicationOnTimeout() {
  */
 void send_bootloader_sequence() {
 	#if DEBUG > 0
-		uart_puts_P("TX: bootloader sequence\n");
+		uart_puts_P("Send bootloader sequence\n");
 	#endif
 
 	/*
@@ -402,7 +424,7 @@ void send_bootloader_sequence() {
 		debugData(msg, 1);
 	#endif
 
-	send_hm_data(msg);
+	hmEncodeAndSendData(msg);
 }
 
 /*
@@ -417,29 +439,14 @@ void wait_for_CB_msg() {
 	while(1) {
 		startApplicationOnTimeout();
 
-		if( !hasData ) {														// Wait for data
-			continue;
-		}
-		
-
-		hmDecode(data);
-		#if DEBUG > 1
-			debugData(data, 0);
-		#endif
-
-		hasData = 0;
-		if (data[7] != hmID[0] || data[8] != hmID[1] || data[9] != hmID[2]) {
-			#if DEBUG > 0
-				uart_puts_P("Got data but not for us\n");
-			#endif
-
+		if ( !hmCheckAndDecodeData() ) {										// Wait for data and decode it
 			continue;
 		}
 
 		// Wait for a CB message like: 0F 01 00 CB 11 22 33 AB CD EF 10 5B 11 F8 15 47
 		if (data[3] == 0xCB) {
 			#if DEBUG > 0
-				uart_puts_P("Got msg to start config\n");
+				uart_puts_P("Got CB message\n");
 			#endif
 
 			if (data[0] >= 17) {
@@ -447,14 +454,12 @@ void wait_for_CB_msg() {
 				expectedMsgIdOffset = data[17];
 			}
 
-			flasher_hmid[0] = data[4];
-			flasher_hmid[1] = data[5];
-			flasher_hmid[2] = data[6];
-			send_ack_if_requested(data);
+			sendResponse(data, MSG_RESPONSE_TYPE_ACK);
 			break;
-		}
 
-		send_nack_to_msg(data);
+		} else {
+			sendResponse(data, MSG_RESPONSE_TYPE_NACK);
+		}
 	}
 }
 
@@ -462,11 +467,10 @@ void wait_for_CB_msg() {
  * Here we retrieve the firmware data and flash it into the flash memory
  */
 void flash_from_rf() {
-	uint8_t state = 0;															// 0 = block has not started, 1 = block started
+	uint8_t state = FLASH_STATE_BLOCK_NOT_STARTED;								// 0 = block has not started, 1 = block started
 	uint8_t blockData[SPM_PAGESIZE];											// buffer to store the data of a whole memory page
-	uint16_t blockLen = 0;
-	uint16_t blockPos = 0;
-	uint32_t pageCnt = 0;
+	uint16_t blockPos  = 0;
+	uint32_t pageCount = 0;
 
 	timeoutCounter = 0;
 	uint8_t expectedMsgId = data[1] + expectedMsgIdOffset + 1;
@@ -478,18 +482,7 @@ void flash_from_rf() {
 	while (1) {
 		startApplicationOnTimeout();
 
-		if(! hasData ) {														// Wait for data
-			continue;
-		}
-		
-		hmDecode(data);
-
-		hasData = 0;
-		if (data[7] != hmID[0] || data[8] != hmID[1] || data[9] != hmID[2]) {
-			#if DEBUG > 0
-				uart_puts_p(dataNotForUs);
-			#endif
-
+		if ( !hmCheckAndDecodeData() ) {										// Wait for data and decode it
 			continue;
 		}
 
@@ -501,77 +494,61 @@ void flash_from_rf() {
 			continue;
 		}
 
-		#if DEBUG > 1
-			debugData(data, 0);
-		#endif
-
 		if (data[1] != expectedMsgId) {
-			if (data[1] == expectedMsgId + 1 && pageCnt > 0) {
-				/*
-				 * The other side may have missed our ACK. It will re send the last block
-				 */
+			if (data[1] == expectedMsgId + 1 && pageCount > 0) {
+				// The other side may have missed our ACK. It will re send the last block
 				expectedMsgId--;
-				pageCnt--;
-				state = 0;
+				pageCount--;
 
 				#if DEBUG > 0
 					uart_puts_P("Retransmit. We will re flash!\n");
 				#endif
 
 			} else {
-				state = 0;
-
 				#if DEBUG > 0
 					uart_puts_P("FATAL: Wrong msgId detected\n");
 				#endif
 			}
+
+			state = FLASH_STATE_BLOCK_NOT_STARTED;
 		}
 
-		if (state == 0) {
-			blockLen = (data[10] << 8);											// Read block length and check memory
-			blockLen += data[11];
-			if (blockLen != SPM_PAGESIZE) {
+		if (state == FLASH_STATE_BLOCK_NOT_STARTED) {
+			state = FLASH_STATE_BLOCK_STARTED;
+
+			if ( ((data[10] << 8) + data[11]) != SPM_PAGESIZE) {				// check block size again SPM_PAGESIZE
 				#if DEBUG > 0
-					uart_puts_P("blockLen != pageSize\n");
+					uart_puts_P("Block length differ pageSize\n");
 				#endif
 
-				state = 0;
-				continue;
-			}
-			if (data[0]-11 > SPM_PAGESIZE) {
-				#if DEBUG > 0
-					uart_puts_P("Block to big\n");
-				#endif
-
-				state = 0;
 				continue;
 			}
 
-			state = 1;
 			blockPos = data[0]-11;
-			memcpy(&blockData, &data[12], data[0]-11);
+			memcpy(&blockData, &data[12], blockPos);
 
 		} else {
-			if (blockPos + data[0]-9 > blockLen) {
+			if (blockPos + data[0]-9 > SPM_PAGESIZE) {
+				state = FLASH_STATE_BLOCK_NOT_STARTED;
+
 				#if DEBUG > 0
-					uart_puts_P("Data size > blockLen\n");
+					uart_puts_P("To many data for current pageSize\n");
 				#endif
 
-				state = 0;
 				continue;
 			}
 
 			memcpy(&blockData[blockPos], &data[10], data[0]-9);
 			blockPos += data[0]-9;
 		}
-		
+
 		if (data[2] == 0x20) {													// last data for current block
-			if (blockPos != blockLen) {
+			if (blockPos != SPM_PAGESIZE) {
 				#if DEBUG > 0
-					uart_puts_P("blockLen and blockPos not match\n");
+					uart_puts_P("pageSize and blockPos differ\n");
 				#endif
 
-				state = 0;
+				state = FLASH_STATE_BLOCK_NOT_STARTED;
 				continue;
 
 			} else {
@@ -586,24 +563,23 @@ void flash_from_rf() {
 				// here we flash the page into memory
 				programPage(pageCount * SPM_PAGESIZE, blockData);
 				pageCount++;
-				expectedMsgId++;
 				timeoutCounter = 0;
 
 				#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 					bitClear(PORT_STATUSLED, PIN_STATUSLED);					// Status-LED off, we blinking
 				#endif
+
+				#if DEBUG > 1
+					pHex(blockData, SPM_PAGESIZE);
+				#endif
+
+				sendResponse(data, MSG_RESPONSE_TYPE_ACK);
+
+				state = FLASH_STATE_BLOCK_NOT_STARTED;
 			}
-
-			//#if DEBUG > 1
-			//	pHex(blockData, blockLen);
-			//#endif
-
-			send_ack(flasher_hmid, data[1]);
-
-			state = 0;
 		}
 
-		if (state == 0) {
+		if (state == FLASH_STATE_BLOCK_NOT_STARTED) {
 			expectedMsgId = data[1] + expectedMsgIdOffset + 1;
 			
 			/**

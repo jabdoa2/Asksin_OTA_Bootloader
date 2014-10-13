@@ -10,20 +10,27 @@
 uint8_t hmID[3];
 uint8_t hmSerial[10];
 
-uint8_t data[60];
-uint8_t hasData = 0;
-uint8_t flasher_hmid[3];
+uint8_t recData[60];
+uint8_t data[60];																// copy of received data
+
+uint8_t hasData = 0;															// flag indicate if we received data for our address
+
 uint16_t timeoutCounter = 0;
+
+#define MSG_RESPONSE_TYPE_ACK         0x00
+#define MSG_RESPONSE_TYPE_NACK        0x80
+
+#define FLASH_STATE_BLOCK_NOT_STARTED 0
+#define FLASH_STATE_BLOCK_STARTED     1
 
 int main();
 void setup_interrupts();
 void programPage (uint32_t pageAddr, uint8_t *buf);
 void hmEncode(uint8_t *buffer);
-void hmDecode(uint8_t *buffer);
-void hmSendData(uint8_t *msg);
-void send_ack(uint8_t *receiver, uint8_t messageId);
-void send_nack_to_msg(uint8_t *msg);
-void send_ack_if_requested(uint8_t* msg);
+uint8_t hmCheckAndDecodeData();
+
+void hmEncodeAndSendData(uint8_t *msg);
+void sendResponse(uint8_t *msg, uint8_t type);
 void startApplication();
 void startApplicationOnTimeout();
 void send_bootloader_sequence();
