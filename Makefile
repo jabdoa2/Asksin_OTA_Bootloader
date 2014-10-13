@@ -28,13 +28,13 @@ all:
 
 # Settings for HM_LC_Sw1PBU_FM (Atmega644, 4k Bootloader size)
 #
-# CODE_LEN:           lenth of program space - 2 bytes (adress of crc-check data)
+# CODE_END:           lenth of program space (adress of crc-check data is at CODE_END - 1)
 # BOOTLOADER_START:   start address of the bootoader   (4k bootloader space)
 # ADDRESS_DATA_START: start address of adressdata      (last 16 bytes in flash)
 #
 HM_LC_Sw1PBU_FM:    TARGET                    = HM_LC_Sw1PBU_FM
 HM_LC_Sw1PBU_FM:    MCU                       = atmega644
-HM_LC_Sw1PBU_FM:    CODE_LEN                  = 0xEFFE
+HM_LC_Sw1PBU_FM:    CODE_END                  = 0xEFFF
 HM_LC_Sw1PBU_FM:    BOOTLOADER_START          = 0xF000
 HM_LC_Sw1PBU_FM:    ADDRESS_DATA_TYPE_START   = 0xFFF0
 HM_LC_Sw1PBU_FM:    ADDRESS_DATA_SERIAL_START = 0xFFF2
@@ -45,7 +45,7 @@ HM_LC_Sw1PBU_FM:    hex
 HM_LC_Sw1PBU_FM_8k: TARGET                    = HM_LC_Sw1PBU_FM
 HM_LC_Sw1PBU_FM_8k: SUFFIX                    = _8k
 HM_LC_Sw1PBU_FM_8k: MCU                       = atmega644
-HM_LC_Sw1PBU_FM_8k: CODE_LEN                  = 0xDFFE
+HM_LC_Sw1PBU_FM_8k: CODE_END                  = 0xDFFF
 HM_LC_Sw1PBU_FM_8k: BOOTLOADER_START          = 0xE000
 HM_LC_Sw1PBU_FM_8k: ADDRESS_DATA_START        = 0xFFF0
 HM_LC_Sw1PBU_FM_8k: ADDRESS_DATA_TYPE_START   = 0xFFF0
@@ -56,7 +56,7 @@ HM_LC_Sw1PBU_FM_8k: hex
 # Settings for HM_LC_Sw1PBU_FM (Atmega328p, 4k Bootloader size)
 HB_UW_Sen_THPL:     TARGET                    = HB_UW_Sen_THPL
 HB_UW_Sen_THPL:     MCU                       = atmega328p
-HB_UW_Sen_THPL:     CODE_LEN                  = 0x6FFE
+HB_UW_Sen_THPL:	    CODE_END                  = 0x6FFF
 HB_UW_Sen_THPL:     BOOTLOADER_START          = 0x7000
 HB_UW_Sen_THPL:     ADDRESS_DATA_TYPE_START   = 0x7FF0
 HB_UW_Sen_THPL:     ADDRESS_DATA_SERIAL_START = 0x7FF2
@@ -65,7 +65,7 @@ HB_UW_Sen_THPL:     hex
 
 hex: uart_code
 	$(CC) -Wall -c -std=c99 -mmcu=$(MCU) $(LDFLAGS) -DF_CPU=$(F_CPU) -D$(TARGET) $(OPTIMIZE) cc.c -o cc.o
-	$(CC) -Wall    -std=c99 -mmcu=$(MCU) $(LDFLAGS) -DF_CPU=$(F_CPU) -D$(TARGET) -DCODE_LEN=${CODE_LEN} $(OPTIMIZE) bootloader.c cc.o uart/uart.o -o $(PROGRAM)-$(TARGET)$(SUFFIX).elf
+	$(CC) -Wall    -std=c99 -mmcu=$(MCU) $(LDFLAGS) -DF_CPU=$(F_CPU) -D$(TARGET) -DCODE_END=${CODE_END} $(OPTIMIZE) bootloader.c cc.o uart/uart.o -o $(PROGRAM)-$(TARGET)$(SUFFIX).elf
 	$(OBJCOPY) -j .text -j .data -j .addressDataType -j .addressDataSerial -j .addressDataId -O $(FORMAT) $(PROGRAM)-$(TARGET)$(SUFFIX).elf $(PROGRAM)-$(TARGET)$(SUFFIX).hex
 
 	avr-size -C --mcu=$(MCU) $(PROGRAM)-$(TARGET)$(SUFFIX).elf

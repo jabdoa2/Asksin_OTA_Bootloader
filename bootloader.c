@@ -5,17 +5,11 @@
 	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.6.2\n\n"			// version number for debug info
 #endif
 
-#if DEBUG > 1
-	#define BOOT_UART_BAUD_RATE  115200			// Baudrate
-#else
-	#define BOOT_UART_BAUD_RATE  57600			// Baudrate
-#endif
+#define BOOT_UART_BAUD_RATE  57600			// Baudrate
 
 #ifndef WAIT_FOR_CONFIG
 	#define WAIT_FOR_CONFIG = 10
 #endif
-
-const char dataNotForUs[] = "Data not for us\n";
 
 /*****************************************
  *        Address data section           *
@@ -265,6 +259,7 @@ void send_ack_if_requested(uint8_t* msg) {
 	send_ack(ack_hmid, msg[1]);
 }
 
+// CRC check related functions
 #if CRC_FLASH == 1
 	/*
 	 * function to update CRC with additional byte. based on
@@ -287,18 +282,18 @@ void send_ack_if_requested(uint8_t* msg) {
 	}
 
 	/*
-	 * Read through program memory for defined CODE_LEN and calculate CRC.
-	 * Then compare with CRC stored at the end of CODE_LEN.
+	 * Read through program memory for defined CODE_END-1 and calculate CRC.
+	 * Then compare with CRC stored at the end of CODE_END-1.
 	 */
 	uint8_t crc_app_ok(void) {
 		uint16_t crc = 0xFFFF;
-		for (uint16_t i=0; i < CODE_LEN; i++) {
+		for (uint16_t i=0; i < CODE_END-1; i++) {
 			crc = updcrc(pgm_read_byte(i), crc);
 		}
 		// augment
 		crc = updcrc(0, updcrc(0, crc));
 
-		return (pgm_read_word(CODE_LEN) == crc);
+		return (pgm_read_word(CODE_END-1) == crc);
 	}
 
 	/*
@@ -318,16 +313,16 @@ void send_ack_if_requested(uint8_t* msg) {
 			blinkLED(2000, 1);													// blink led
 		#endif
 
-		wdt_reset();
-
 		#if DEBUG > 0
 			uart_puts_P("CRC fail: Boot\n");
 		#endif
 
+		wdt_reset();
+
 		wdt_enable(WDTO_1S);
-		while(1);																// wait for Watchdog to generate reset
+		while(1);																// wait for watchdog to generate reset
 	}
-#endif 
+#endif
 
 /**
  * Start the main application
