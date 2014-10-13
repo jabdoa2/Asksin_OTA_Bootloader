@@ -5,11 +5,7 @@
 	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.6.2\n\n"			// version number for debug info
 #endif
 
-#define BOOT_UART_BAUD_RATE  57600			// Baudrate
-
-#ifndef WAIT_FOR_CONFIG
-	#define WAIT_FOR_CONFIG = 10
-#endif
+#define BOOT_UART_BAUD_RATE  57600												// Baudrate for debugging
 
 /*****************************************
  *        Address data section           *
@@ -53,7 +49,7 @@ uint8_t expectedMsgIdOffset;
 int main() {
 	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined (INPUT_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
 		uint8_t watchdogReset = 0;
-		watchdogReset = bitRead(MCUSR, WDRF);									// is reset triggert from watchdog?
+		watchdogReset = bitRead(MCUSR, WDRF);									// is reset was triggered from watchdog?
 	#endif
 	
 	MCUSR=0;																	// disable watchdog (used for software reset the device)
@@ -68,7 +64,7 @@ int main() {
 	setup_interrupts();
 
 	#if DEBUG > 0
-		uart_puts_P("Sw to 10k\n");
+		uart_puts_P("Switch to 10k mode\n");
 	#endif
 	cc1101Init(CC1101_MODE_10k);												// Initialize cc1101 and go to standard 10k mode.
 
@@ -88,10 +84,9 @@ int main() {
 		#endif
 
 		/**
-		 * Check if config button pressed after power on reset or a watchdog reset was triggert, then start bootloader. Else start application.
+		 * Check if config button pressed after power on reset or a watchdog reset was triggered, then start bootloader. Else start application.
 		 */
 		if( bitRead(INPUT_CONFIG_BTN, PIN_CONFIG_BTN) && !watchdogReset) {		// check if button not pressed (button must be at high level)
-
 			#if CRC_FLASH == 1
 				if (crcOk) {
 					startApplication();											// then start Application
@@ -114,7 +109,7 @@ int main() {
 	wait_for_CB_msg();															// wait for message in 10k mode to change to 100k mode
 
 	#if DEBUG > 0
-		uart_puts_P("Sw to 100k\n");
+		uart_puts_P("Switch to 100k mode\n");
 	#endif
 	cc1101Init(CC1101_MODE_100k);												// Initialize cc1101 again and switch to 100k mode
 
@@ -193,7 +188,7 @@ void programPage (uint32_t pageAddr, uint8_t *buf) {
 }
 
 /*
- * Check for data and decode data.
+ * Check for if data was received and decode them.
  */
 uint8_t hmCheckAndDecodeData() {
 	if ( !hasData ) {
@@ -263,8 +258,6 @@ void hmEncodeAndSendData(uint8_t *msg) {
 	sei();
 }
 
-
-
 // CRC check related functions
 #if CRC_FLASH == 1
 	/*
@@ -303,6 +296,7 @@ void hmEncodeAndSendData(uint8_t *msg) {
 	}
 
 	/*
+	 * Check if CRC was ok.
 	 * Do a reset if CRC check fails, so that bootloader is ready to receive new firmware.
 	 */
 	void resetOnCRCFail(){
@@ -320,7 +314,7 @@ void hmEncodeAndSendData(uint8_t *msg) {
 		#endif
 
 		#if DEBUG > 0
-			uart_puts_P("CRC fail: Boot\n");
+			uart_puts_P("CRC fail: Reboot\n");
 		#endif
 
 		wdt_reset();
@@ -342,7 +336,7 @@ void sendResponse(uint8_t *msg, uint8_t type) {
 			return;
 		}
 
-		#if DEBUG > 0
+		#if DEBUG > 1
 			uart_puts_P("Send ACK\n");
 		#endif
 	}
@@ -360,7 +354,7 @@ void startApplication() {
 
 	#if DEBUG > 0
 		uart_puts_P("Start App\n");
-		_delay_ms(250);
+		_delay_us(32000);
 	#endif
 
 	/*
@@ -370,6 +364,9 @@ void startApplication() {
 		bitClear(PORT_CONFIG_BTN, PIN_CONFIG_BTN);								// reset pullup
 	#endif
 
+	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
+		bitClear(PORT_STATUSLED, PIN_STATUSLED);								// Status-LED off
+	#endif
 
 	// Restore interrupt vectors
 	cli();
@@ -387,7 +384,7 @@ void startApplication() {
 void startApplicationOnTimeout() {
 	if (timeoutCounter > 30000) {												// wait about 10s at 8Mhz
 		#if DEBUG > 0
-			uart_puts_P("Timeout\n");
+			uart_puts_P("\nTimeout\n");
 		#endif
 
 		#if CRC_FLASH == 1
@@ -432,7 +429,7 @@ void send_bootloader_sequence() {
  */
 void wait_for_CB_msg() {
 	#if DEBUG > 0
-		uart_puts_P("Wait for CB Msg\n");
+		uart_puts_P("Wait for CB message\n");
 	#endif
 
 	timeoutCounter = 0;															// reset timeout
@@ -450,7 +447,7 @@ void wait_for_CB_msg() {
 			#endif
 
 			if (data[0] >= 17) {
-				// spechial for update with ccu
+				// special for update with CCU
 				expectedMsgIdOffset = data[17];
 			}
 
@@ -612,11 +609,11 @@ void flash_from_rf() {
  */
 ISR(INT0_vect) {
 	cli();
-	
+
 	if (receiveData(recData)) {
 		hasData = 1;
 	}
-	
+
 	sei();
 }
 
