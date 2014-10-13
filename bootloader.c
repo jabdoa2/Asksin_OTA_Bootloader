@@ -93,30 +93,11 @@ int main() {
 			crcOk = crc_app_ok();
 		#endif
 
-		if (watchdogReset && crcOk) {
-			uart_puts_P("Wait few seconds for config btn\n");
-			uint16_t waitForButton = 0;
-
-			/**
-			 * Wait up to <WAIT_FOR_CONFIG> seconds until config button was pressed.
-			 * We will wait only if before a watchdog reset occurs and if crc check was true
-			 */
-			while(waitForButton <= WAIT_FOR_CONFIG * 2) {
-				#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
-					blinkLED(5, 495);											// blink led
-				#endif
-
-				if( !bitRead(INPUT_CONFIG_BTN, PIN_CONFIG_BTN) ) {
-					break;
-				}
-				waitForButton++;
-			}
-		}
-
 		/**
 		 * Check if config button pressed after power on reset or a watchdog reset was triggert, then start bootloader. Else start application.
 		 */
-		if( bitRead(INPUT_CONFIG_BTN, PIN_CONFIG_BTN) ) {						// check if button not pressed (button must be at high level)
+		if( bitRead(INPUT_CONFIG_BTN, PIN_CONFIG_BTN) && !watchdogReset) {		// check if button not pressed (button must be at high level)
+
 			#if CRC_FLASH == 1
 				if (crcOk) {
 					startApplication();											// then start Application
@@ -126,7 +107,6 @@ int main() {
 			#endif
 		}
 	#endif
-
 
 	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 		blinkLED(25, 200);														// Blink status led again after init done
@@ -481,20 +461,18 @@ void wait_for_CB_msg() {
  * Here we retrieve the firmware data and flash it into the flash memory
  */
 void flash_from_rf() {
-	timeoutCounter = 0;
-
-	#if DEBUG > 0
-		uart_puts_P("Start receive firmware\n");
-	#endif
-
 	uint8_t state = 0;															// 0 = block has not started, 1 = block started
 	uint8_t blockData[SPM_PAGESIZE];											// buffer to store the data of a whole memory page
 	uint16_t blockLen = 0;
 	uint16_t blockPos = 0;
 	uint32_t pageCnt = 0;
 
+	timeoutCounter = 0;
 	uint8_t expectedMsgId = data[1] + expectedMsgIdOffset + 1;
 
+	#if DEBUG > 0
+		uart_puts_P("Start receive firmware\n");
+	#endif
 
 	while (1) {
 		startApplicationOnTimeout();
@@ -516,7 +494,7 @@ void flash_from_rf() {
 
 		if (data[3] != 0xCA) {
 			#if DEBUG > 0
-				uart_puts_P("Got other msg type\n");
+				uart_puts_P("Got other message type\n");
 			#endif
 
 			continue;
@@ -528,7 +506,6 @@ void flash_from_rf() {
 
 		if (data[1] != expectedMsgId) {
 			if (data[1] == expectedMsgId + 1 && pageCnt > 0) {
-
 				/*
 				 * The other side may have missed our ACK. It will re send the last block
 				 */
@@ -537,14 +514,14 @@ void flash_from_rf() {
 				state = 0;
 
 				#if DEBUG > 0
-					uart_puts_P("Retransmit. Will reflash!\n");
+					uart_puts_P("Retransmit. We will re flash!\n");
 				#endif
 
 			} else {
 				state = 0;
 
 				#if DEBUG > 0
-					uart_puts_P("FATAL: Wrong msgId detected!\n");
+					uart_puts_P("FATAL: Wrong msgId detected\n");
 				#endif
 			}
 		}
