@@ -26,7 +26,7 @@ uint16_t timeoutCounter = 0;
 #define MAGIC_WORD                    0x4711									// magic word for bootloader self update
 
 int main();
-void setup_interrupts();
+void setupInterrupts();
 void programPage (uint32_t pageAddr, uint8_t *buf);
 void hmEncode(uint8_t *buffer);
 uint8_t hmCheckAndDecodeData();
@@ -35,11 +35,11 @@ void hmEncodeAndSendData(uint8_t *msg);
 void sendResponse(uint8_t *msg, uint8_t type);
 void startApplication();
 void startApplicationOnTimeout();
-void send_bootloader_sequence();
-void wait_for_CB_msg();
+void sendBootloaderSequence();
+void waitForCbMsg();
 void switch_radio_to_100k_mode();
 void switch_radio_to_10k_mode();
-void flash_from_rf();
+void flashFromRF();
 
 // CRC check related functions
 static uint16_t updcrc(uint8_t c, uint16_t crc);

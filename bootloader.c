@@ -59,7 +59,7 @@ int main() {
 		blinkLED(25, 200);														// Blink status led indicating bootloader
 	#endif
 
-	setup_interrupts();
+	setupInterrupts();
 
 	#if DEBUG > 0
 		uart_puts_P("Switch to 10k mode\n");
@@ -94,22 +94,22 @@ int main() {
 	memcpy_P(&hmID, &hm_id[0], 3);
 	memcpy_P(&hmSerial, &hm_serial[0], 10);
 
-	send_bootloader_sequence();													// send broadcast to allow the ccu2, windows tool or flash_ota to discover device
-	wait_for_CB_msg();															// wait for message in 10k mode to change to 100k mode
+	sendBootloaderSequence();													// send broadcast to allow the ccu2, windows tool or flash_ota to discover device
+	waitForCbMsg();																// wait for message in 10k mode to change to 100k mode
 
 	#if DEBUG > 0
 		uart_puts_P("Switch to 100k mode\n");
 	#endif
 	cc1101Init(CC1101_MODE_100k);												// Initialize cc1101 again and switch to 100k mode
 
-	wait_for_CB_msg();															// wait again for CB message
-	flash_from_rf();															// run the actual flashing
+	waitForCbMsg();																// wait again for CB message
+	flashFromRF();															// run the actual flashing
 }
 
 /**
  * Initialize all needed interrupts
  */
-void setup_interrupts() {
+void setupInterrupts() {
 	/**
 	 * Setup interrupts for bootloder
 	 * map to correct interrupt table for bootloader
@@ -401,7 +401,7 @@ void startApplicationOnTimeout() {
 /**
  * Send the bootloader sequence to broadcast to inform a waiting CCU or flash application.
  */
-void send_bootloader_sequence() {
+void sendBootloaderSequence() {
 	#if DEBUG > 0
 		uart_puts_P("Send bootloader sequence\n");
 	#endif
@@ -427,7 +427,7 @@ void send_bootloader_sequence() {
 /*
  * Wait for a CB message
  */
-void wait_for_CB_msg() {
+void waitForCbMsg() {
 	#if DEBUG > 0
 		uart_puts_P("Wait for CB message\n");
 	#endif
@@ -458,7 +458,7 @@ void wait_for_CB_msg() {
 /**
  * Here we retrieve the firmware data and flash it into the flash memory
  */
-void flash_from_rf() {
+void flashFromRF() {
 	uint8_t state = FLASH_STATE_BLOCK_NOT_STARTED;								// 0 = block has not started, 1 = block started
 	uint8_t blockData[SPM_PAGESIZE];											// buffer to store the data of a whole memory page
 
