@@ -68,7 +68,9 @@ hex: uart_code
 	$(CC) -Wall    -std=c99 -mmcu=$(MCU) $(LDFLAGS) -DF_CPU=$(F_CPU) -D$(TARGET) -DCODE_END=${CODE_END} $(OPTIMIZE) bootloader.c cc.o uart/uart.o -o $(PROGRAM)-$(TARGET)$(SUFFIX).elf
 	$(OBJCOPY) -j .text -j .data -j .addressDataType -j .addressDataSerial -j .addressDataId -O $(FORMAT) $(PROGRAM)-$(TARGET)$(SUFFIX).elf $(PROGRAM)-$(TARGET)$(SUFFIX).hex
 
-	avr-size -C --mcu=$(MCU) $(PROGRAM)-$(TARGET)$(SUFFIX).elf
+	@avr-nm -fsysv -n -S -l -a $(PROGRAM)-$(TARGET)$(SUFFIX).elf
+	echo
+	@avr-size -B --mcu=$(MCU) $(PROGRAM)-$(TARGET)$(SUFFIX).elf
 
 uart_code:
 	$(MAKE) -C ./uart/ MCU=$(MCU)
