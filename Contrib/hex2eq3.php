@@ -5,6 +5,7 @@ define('LF', "\n");
 
 class converter {
 
+	protected $magicWord = 0x4711;												// magic word for tag updatefile as bootloader
 	protected $tmpFile = 'tmpfile.tmp';
 	protected $options = array(
 		'help',
@@ -15,6 +16,7 @@ class converter {
 		'pathTo-srec_cat:',
 		'hexEndAddress:',
 		'withCrcCheck',
+		'markAsBootloaderUpdate',
 	);
 
 	protected $thisScript = '';
@@ -26,6 +28,7 @@ class converter {
 	protected $pathToSrecCat;
 	protected $hexEndAddress;
 	protected $withCrcCheck;
+	protected $markAsBootloaderUpdate;
 
 	/**
 	 * The constructor
@@ -46,14 +49,15 @@ class converter {
 
 			$this->printHelpAndExit();
 		} else {
-			$this->inFile        = $options['inFile'];
-			$this->outFormat     = (array_key_exists('outFormat' , $options)       && $options['outFormat'])        ? $options['outFormat']       : 'eq3';
-			$this->spmPageSize   = (array_key_exists('spmPageSize' , $options)     && $options['spmPageSize'])      ? $options['spmPageSize']     : 128;
-			$this->pathToSrecCat = (array_key_exists('pathTo-srec_cat' , $options) && $options['pathTo-srec_cat'])  ? $options['pathTo-srec_cat'] : $this->thisScriptPathAbs . '/bin/srecord/srec_cat';
-			$this->hexEndAddress = (array_key_exists('hexEndAddress' , $options)   && $options['hexEndAddress'])    ? $options['hexEndAddress']   : '0x6FFE';
-			$this->hexEndAddress = ((int)$this->hexEndAddress == $this->hexEndAddress)                              ? (int)$this->hexEndAddress   : hexdec($this->hexEndAddress);
+			$this->inFile                 = $options['inFile'];
+			$this->outFormat              = (array_key_exists('outFormat' , $options)       && $options['outFormat'])        ? $options['outFormat']       : 'eq3';
+			$this->spmPageSize            = (array_key_exists('spmPageSize' , $options)     && $options['spmPageSize'])      ? $options['spmPageSize']     : 128;
+			$this->pathToSrecCat          = (array_key_exists('pathTo-srec_cat' , $options) && $options['pathTo-srec_cat'])  ? $options['pathTo-srec_cat'] : $this->thisScriptPathAbs . '/bin/srecord/srec_cat';
+			$this->hexEndAddress          = (array_key_exists('hexEndAddress' , $options)   && $options['hexEndAddress'])    ? $options['hexEndAddress']   : '0x6FFE';
+			$this->hexEndAddress          = ((int)$this->hexEndAddress == $this->hexEndAddress)                              ? (int)$this->hexEndAddress   : hexdec($this->hexEndAddress);
 
-			$this->withCrcCheck  = (array_key_exists('withCrcCheck' , $options))                                    ? true                        : false;
+			$this->withCrcCheck           = (array_key_exists('withCrcCheck' , $options))                                    ? true                        : false;
+			$this->markAsBootloaderUpdate = (array_key_exists('markAsBootloaderUpdate' , $options))                          ? true                        : false;
 		}
 
 		if ($this->spmPageSize != 64 && $this->spmPageSize != 128 && $this->spmPageSize != 256 && $this->spmPageSize != 512) {
@@ -111,14 +115,23 @@ class converter {
 		$out = '';
 		while(!feof($fp)) {
 			$payload = fread($fp, $this->spmPageSize);
-			$out.= sprintf('%04X', $this->spmPageSize);
-			for($i = 0; $i < $this->spmPageSize; $i++) {
-				if ($i >= strlen($payload)) {
-					$out.= '00';
-				} else {
-					$out.= sprintf('%02X', ord($payload[$i]));
+			if (strlen($payload) > 0) {
+				$out.= sprintf('%04X', $this->spmPageSize);
+
+				for($i = 0; $i < $this->spmPageSize; $i++) {
+					if ($i >= strlen($payload)) {
+						$out.= '00';
+					} else {
+						$out.= sprintf('%02X', ord($payload[$i]));
+					}
 				}
 			}
+		}
+
+		if ($this->markAsBootloaderUpdate) {
+			$crc = substr($out, -4);
+			$out = substr($out, 0, -8);
+			$out.= sprintf('%04X', $this->magicWord) . $crc;
 		}
 
 		file_put_contents($this->outFile, $out);

@@ -23,6 +23,7 @@ uint16_t timeoutCounter = 0;
 #define FLASH_STATE_BLOCK_NOT_STARTED 0x00
 #define FLASH_STATE_BLOCK_STARTED     0x01
 
+#define MAGIC_WORD                    0x4711									// magic word for bootloader self update
 
 int main();
 void setup_interrupts();

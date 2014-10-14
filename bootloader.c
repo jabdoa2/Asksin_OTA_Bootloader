@@ -338,6 +338,25 @@ void sendResponse(uint8_t *msg, uint8_t type) {
 void startApplication() {
 	void (*start)( void ) = 0x0000;												// Funktionspointer auf 0x0000
 
+	/**
+	 * Check if new Bootloader was flashed via OTA and is ready to be transfered into BL area.
+	 */
+	if(pgm_read_word(BOOTLOADER_START - 4) == MAGIC_WORD){
+		#if DEBUG > 0
+			uart_puts_P("Start bootloader Self Update!\n");
+			_delay_us(32000);
+		#endif
+
+		#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
+			// blink led 5 times indicating bootloader update
+			for (uint8_t i=0; i < 5; i++){
+				blinkLED(100, 100);
+			}
+		#endif
+
+		updateBootloaderFromRWW();
+	}
+
 	#if DEBUG > 0
 		uart_puts_P("Start App\n");
 		_delay_us(32000);
@@ -583,4 +602,48 @@ ISR(INT0_vect) {
 ISR(TIMER0_OVF_vect) {
 	TCNT0 = 0;
 	timeoutCounter++;
+}
+
+
+// the updateBootloaderFromRWW function is placed in the topmost page and cannot be changed via OTA Update
+// this must not be touched for OTA update otherwise you may brick the bootloader and need and ISP update
+void updateBootloaderFromRWW(void) __attribute__ ((section (".bootloaderUpdate")));
+void updateBootloaderFromRWW(){
+	// copy bootloader image from RWW section into NRWW section (except top page with this function)
+
+	cli();																		// make shure all interrups are off
+
+	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
+		bitSet(PORT_STATUSLED, PIN_STATUSLED);									// Status-LED on for indicating bootloader update
+	#endif
+
+	for (uint8_t i=0; i < BOOTLOADER_PAGES-1; i++){
+		uint32_t pageAddr = BOOTLOADER_START + (i * SPM_PAGESIZE);				// address of page to flash
+		boot_page_erase (pageAddr);												// we must erase the page before
+		boot_spm_busy_wait();													// Wait until the memory is erased.
+
+		for(uint16_t j=0; j < SPM_PAGESIZE; j=+2){
+			boot_page_fill(pageAddr+j, pgm_read_word((i * SPM_PAGESIZE) + j));	//wordbuf=pgm_read_word((i*SPM_PAGESIZE)+j);
+		}
+
+		boot_page_write(pageAddr);												// write new page
+		boot_spm_busy_wait();													// Wait until the memory is written.
+
+		/*
+		 * Re-enable RWW-section again. We need this if we want to jump back
+		 * to the application after bootloading.
+		 */
+		boot_rww_enable();
+	}
+
+	// Bootloader update complete. We delete the MAGIC_WORD at end of program section
+	boot_page_erase(BOOTLOADER_START - SPM_PAGESIZE);
+	boot_spm_busy_wait();														// Wait until the memory is erased.
+
+	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
+		bitClear(PORT_STATUSLED, PIN_STATUSLED);								// Status-LED off
+	#endif
+
+	wdt_enable(WDTO_1S);
+	while(1);																	// wait for watchdog to generate reset
 }
