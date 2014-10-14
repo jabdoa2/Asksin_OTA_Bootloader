@@ -144,7 +144,7 @@ void setupInterrupts() {
 void programPage (uint32_t pageAddr, uint8_t *buf) {
 	if (pageAddr > CODE_END+1 - SPM_PAGESIZE) {
 		#if DEBUG > 0
-			uart_puts_P("pageAddr exceeds available flash memory\n");
+			uart_puts_P("pageAddr exceeds flash memory\n");
 		#endif
 
 		return;
@@ -302,7 +302,7 @@ void resetOnCRCFail(){
 	#endif
 
 	#if DEBUG > 0
-		uart_puts_P("CRC fail: Reboot\n");
+		uart_puts_P("CRC fail, Reboot\n");
 	#endif
 
 	wdt_reset();
@@ -324,7 +324,7 @@ void sendResponse(uint8_t *msg, uint8_t type) {
 		}
 
 		#if DEBUG > 1
-			uart_puts_P("Send ACK\n");
+			uart_puts_P("TX ACK\n");
 		#endif
 	}
 
@@ -343,7 +343,7 @@ void startApplication() {
 	 */
 	if(pgm_read_word(BOOTLOADER_START - 4) == MAGIC_WORD){
 		#if DEBUG > 0
-			uart_puts_P("Start bootloader Self Update!\n");
+			uart_puts_P("Bootloader selfUpdate!\n");
 			_delay_us(32000);
 		#endif
 
@@ -389,7 +389,7 @@ void startApplication() {
 void startApplicationOnTimeout() {
 	if (timeoutCounter > 30000) {												// wait about 10s at 8Mhz
 		#if DEBUG > 0
-			uart_puts_P("\nTimeout\n");
+			uart_puts_P("Timeout\n");
 		#endif
 
 		resetOnCRCFail();
@@ -403,7 +403,7 @@ void startApplicationOnTimeout() {
  */
 void sendBootloaderSequence() {
 	#if DEBUG > 0
-		uart_puts_P("Send bootloader sequence\n");
+		uart_puts_P("TX bootloader sequence\n");
 	#endif
 
 	/*
@@ -429,7 +429,7 @@ void sendBootloaderSequence() {
  */
 void waitForCbMsg() {
 	#if DEBUG > 0
-		uart_puts_P("Wait for CB message\n");
+		uart_puts_P("Wait for CB msg\n");
 	#endif
 
 	timeoutCounter = 0;															// reset timeout
@@ -443,7 +443,7 @@ void waitForCbMsg() {
 		// Wait for a CB message like: 0F 01 00 CB 11 22 33 AB CD EF 10 5B 11 F8 15 47
 		if (data[3] == 0xCB) {
 			#if DEBUG > 0
-				uart_puts_P("Got CB message\n");
+				uart_puts_P("Got CB msg\n");
 			#endif
 
 			sendResponse(data, MSG_RESPONSE_TYPE_ACK);
@@ -470,7 +470,7 @@ void flashFromRF() {
 	timeoutCounter = 0;
 
 	#if DEBUG > 0
-		uart_puts_P("Start receive firmware\n");
+		uart_puts_P("Receive firmware\n");
 	#endif
 
 	while (1) {
@@ -482,7 +482,7 @@ void flashFromRF() {
 
 		if (data[3] != 0xCA) {
 			#if DEBUG > 0
-				uart_puts_P("Got other message type\n");
+				uart_puts_P("Got other msgType\n");
 			#endif
 
 			continue;
@@ -495,33 +495,43 @@ void flashFromRF() {
 				pageCount--;
 
 				#if DEBUG > 0
-					uart_puts_P("Retransmit. We will re flash!\n");
+					uart_puts_P("Retransmit, reflash!\n");
 				#endif
 			}
 		}
 
-		if (state == FLASH_STATE_BLOCK_NOT_STARTED) {
-			state = FLASH_STATE_BLOCK_STARTED;
+		// current msgId sould > previousMsgId. Exception: previousMsgId 70-80 or previousMsgId > 245
+		if ( (data[1] < previousMsgId && previousMsgId < 70) || (data[1] < previousMsgId && (previousMsgId > 80 && previousMsgId < 245)) ) {
+			#if DEBUG > 0
+				uart_puts_P("Wrong MsgId!\n");
+			#endif
 
+			state = FLASH_STATE_BLOCK_NOT_STARTED;
+			continue;
+		}
+
+		if (state == FLASH_STATE_BLOCK_NOT_STARTED) {
 			if ( ((data[10] << 8) + data[11]) != SPM_PAGESIZE) {				// check block size again SPM_PAGESIZE
 				#if DEBUG > 0
-					uart_puts_P("Block length differ pageSize\n");
+					uart_puts_P("blockLen differ pageSize\n");
 				#endif
 
+				state = FLASH_STATE_BLOCK_NOT_STARTED;
 				continue;
 			}
+
+			state = FLASH_STATE_BLOCK_STARTED;
 
 			blockPos = data[0]-11;
 			memcpy(&blockData, &data[12], blockPos);
 
 		} else {
 			if (blockPos + data[0]-9 > SPM_PAGESIZE) {
-				state = FLASH_STATE_BLOCK_NOT_STARTED;
-
 				#if DEBUG > 0
-					uart_puts_P("To many data for current pageSize\n");
+					uart_puts_P("To many data for pageSize\n");
 				#endif
 
+				state = FLASH_STATE_BLOCK_NOT_STARTED;
 				continue;
 			}
 
@@ -622,7 +632,6 @@ void updateBootloaderFromRWW(){
 	#endif
 
 	for (uint8_t i=0; i < BOOTLOADER_PAGES-1; i++){
-
 		uint32_t pageAddr = BOOTLOADER_START + (i * SPM_PAGESIZE);				// address of page to flash
 		boot_page_erase (pageAddr);												// we must erase the page before
 		boot_spm_busy_wait();													// Wait until the memory is erased.
@@ -633,17 +642,17 @@ void updateBootloaderFromRWW(){
 
 		boot_page_write(pageAddr);												// write new page
 		boot_spm_busy_wait();													// Wait until the memory is written.
-
-		/*
-		 * Re-enable RWW-section again. We need this if we want to jump back
-		 * to the application after bootloading.
-		 */
-		boot_rww_enable();
 	}
 
 	// Bootloader update complete. We delete the MAGIC_WORD at end of program section
 	boot_page_erase(BOOTLOADER_START - SPM_PAGESIZE);
 	boot_spm_busy_wait();														// Wait until the memory is erased.
+
+	/*
+	 * Re-enable RWW-section again. We need this if we want to jump back
+	 * to the application after bootloading.
+	 */
+	boot_rww_enable();
 
 	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 		bitClear(PORT_STATUSLED, PIN_STATUSLED);								// Status-LED off
