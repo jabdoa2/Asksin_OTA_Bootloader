@@ -163,7 +163,7 @@ void programPage (uint32_t pageAddr, uint8_t *buf) {
 		uint16_t word = *buf++;													// Set up little-endian word.
 		word += (*buf++) << 8;
 
-		boot_page_fill (pageAddr + i, word);
+		boot_page_fill(pageAddr + i, word);
 	}
 
 	boot_page_write (pageAddr);													// Store buffer in flash page.
@@ -284,8 +284,6 @@ uint8_t crc_app_ok(void) {
 
 	return (pgm_read_word(CODE_END-1) == crc);
 }
-	}
-
 
 /*
  * Check if CRC was ok.
@@ -377,12 +375,7 @@ void startApplicationOnTimeout() {
 			uart_puts_P("\nTimeout\n");
 		#endif
 
-		#if CRC_FLASH == 1
-			/*
-			 * if CRC-Check is enabled, check CRC checksum before application start
-			 */
-			resetOnCRCFail();
-		#endif
+		resetOnCRCFail();
 
 		startApplication();
 	}
@@ -456,6 +449,7 @@ void wait_for_CB_msg() {
 void flash_from_rf() {
 	uint8_t state = FLASH_STATE_BLOCK_NOT_STARTED;								// 0 = block has not started, 1 = block started
 	uint8_t blockData[SPM_PAGESIZE];											// buffer to store the data of a whole memory page
+
 	uint16_t blockPos  = 0;
 	uint32_t pageCount = 0;
 
