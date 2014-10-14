@@ -20,8 +20,9 @@ uint16_t timeoutCounter = 0;
 #define MSG_RESPONSE_TYPE_ACK         0x00
 #define MSG_RESPONSE_TYPE_NACK        0x80
 
-#define FLASH_STATE_BLOCK_NOT_STARTED 0
-#define FLASH_STATE_BLOCK_STARTED     1
+#define FLASH_STATE_BLOCK_NOT_STARTED 0x00
+#define FLASH_STATE_BLOCK_STARTED     0x01
+
 
 int main();
 void setup_interrupts();
@@ -39,6 +40,14 @@ void switch_radio_to_100k_mode();
 void switch_radio_to_10k_mode();
 void flash_from_rf();
 
+// CRC check related functions
+static uint16_t updcrc(uint8_t c, uint16_t crc);
+uint8_t crc_app_ok(void);
+void resetOnCRCFail();
+uint16_t crcCalc(uint8_t *buf);
+
+void updateBootloaderFromRWW();
+
 ISR(INT0_vect);
 ISR(TIMER0_OVF_vect);
 
@@ -51,10 +60,4 @@ ISR(TIMER0_OVF_vect);
 	void pHex(const uint8_t *buf, uint8_t len);
 
 	void debugData(const uint8_t *buf, uint8_t dir);
-#endif
-
-#if CRC_FLASH == 1
-	static uint16_t updcrc(uint8_t c, uint16_t crc);
-	uint8_t crc_app_ok(void);
-	void resetOnCRCFail();
 #endif

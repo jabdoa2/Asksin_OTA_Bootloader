@@ -78,22 +78,13 @@ int main() {
 		bitSet(PORT_CONFIG_BTN, PIN_CONFIG_BTN);								// set pullup
 		_delay_us(10);
 
-		uint8_t crcOk = 1;
-		#if CRC_FLASH == 1
-			crcOk = crc_app_ok();
-		#endif
-
 		/**
 		 * Check if config button pressed after power on reset or a watchdog reset was triggered, then start bootloader. Else start application.
 		 */
 		if( bitRead(INPUT_CONFIG_BTN, PIN_CONFIG_BTN) && !watchdogReset) {		// check if button not pressed (button must be at high level)
-			#if CRC_FLASH == 1
-				if (crcOk) {
-					startApplication();											// then start Application
-				}
-			#else
+			if (crc_app_ok()) {
 				startApplication();												// then start Application
-			#endif
+			}
 		}
 	#endif
 
@@ -259,70 +250,70 @@ void hmEncodeAndSendData(uint8_t *msg) {
 }
 
 // CRC check related functions
-#if CRC_FLASH == 1
-	/*
-	 * function to update CRC with additional byte. based on
-	 * http://www.avrfreaks.net/index.php?name=PNphpBB2&file=printview&t=127852&start=0
-	 */
-	static uint16_t updcrc(uint8_t c, uint16_t crc) {
-		uint8_t flag;
-		for (uint8_t i = 0; i < 8; ++i) {
-			flag = !!(crc & 0x8000);
-			crc <<= 1;
-			if (c & 0x80) {
-				crc |= 1;
-			}
-			if (flag) {
-				crc ^= 0x1021;
-			}
-			c <<= 1;
+/*
+ * function to update CRC with additional byte. based on
+ * http://www.avrfreaks.net/index.php?name=PNphpBB2&file=printview&t=127852&start=0
+ */
+static uint16_t updcrc(uint8_t c, uint16_t crc) {
+	uint8_t flag;
+	for (uint8_t i = 0; i < 8; ++i) {
+		flag = !!(crc & 0x8000);
+		crc <<= 1;
+		if (c & 0x80) {
+			crc |= 1;
 		}
-		return crc;
+		if (flag) {
+			crc ^= 0x1021;
+		}
+		c <<= 1;
+	}
+	return crc;
+}
+
+/*
+ * Read through program memory for defined CODE_END-1 and calculate CRC.
+ * Then compare with CRC stored at the end of CODE_END-1.
+ */
+uint8_t crc_app_ok(void) {
+	uint16_t crc = 0xFFFF;
+	for (uint16_t i=0; i < CODE_END-1; i++) {
+		crc = updcrc(pgm_read_byte(i), crc);
+	}
+	// augment
+	crc = updcrc(0, updcrc(0, crc));
+
+	return (pgm_read_word(CODE_END-1) == crc);
+}
 	}
 
-	/*
-	 * Read through program memory for defined CODE_END-1 and calculate CRC.
-	 * Then compare with CRC stored at the end of CODE_END-1.
-	 */
-	uint8_t crc_app_ok(void) {
-		uint16_t crc = 0xFFFF;
-		for (uint16_t i=0; i < CODE_END-1; i++) {
-			crc = updcrc(pgm_read_byte(i), crc);
-		}
-		// augment
-		crc = updcrc(0, updcrc(0, crc));
 
-		return (pgm_read_word(CODE_END-1) == crc);
-	}
-
-	/*
-	 * Check if CRC was ok.
-	 * Do a reset if CRC check fails, so that bootloader is ready to receive new firmware.
-	 */
-	void resetOnCRCFail(){
-		if(crc_app_ok()){
-			#if DEBUG > 0
-				uart_puts_P("CRC OK\n");
-			#endif
-
-			return;
-		}
-
-		// At this point we have a CRC failure. We reboot the device
-		#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
-			blinkLED(2000, 1);													// blink led
-		#endif
-
+/*
+ * Check if CRC was ok.
+ * Do a reset if CRC check fails, so that bootloader is ready to receive new firmware.
+ */
+void resetOnCRCFail(){
+	if(crc_app_ok()){
 		#if DEBUG > 0
-			uart_puts_P("CRC fail: Reboot\n");
+			uart_puts_P("CRC OK\n");
 		#endif
 
-		wdt_reset();
-
-		wdt_enable(WDTO_1S);
-		while(1);																// wait for watchdog to generate reset
+		return;
 	}
-#endif
+
+	// At this point we have a CRC failure. We reboot the device
+	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
+		blinkLED(2000, 1);													// blink led
+	#endif
+
+	#if DEBUG > 0
+		uart_puts_P("CRC fail: Reboot\n");
+	#endif
+
+	wdt_reset();
+
+	wdt_enable(WDTO_1S);
+	while(1);																// wait for watchdog to generate reset
+}
 
 /**
  * Send response (ACK or NACK)
@@ -341,8 +332,7 @@ void sendResponse(uint8_t *msg, uint8_t type) {
 		#endif
 	}
 
-	uint8_t responseMsg[11] = { 10, msg[1], 0x80, 0x02, hmID[0], hmID[1], hmID[2], msg[4], msg[5], msg[6], type};
-
+	uint8_t responseMsg[11] = { 10, msg[1], 0x80, 0x02, hmID[0], hmID[1], hmID[2], msg[4], msg[5], msg[6], type };
 	hmEncodeAndSendData(responseMsg);
 }
 
@@ -566,9 +556,9 @@ void flash_from_rf() {
 					bitClear(PORT_STATUSLED, PIN_STATUSLED);					// Status-LED off, we blinking
 				#endif
 
-				#if DEBUG > 1
-					pHex(blockData, SPM_PAGESIZE);
-				#endif
+//				#if DEBUG > 1
+//					pHex(blockData, SPM_PAGESIZE);
+//				#endif
 
 				sendResponse(data, MSG_RESPONSE_TYPE_ACK);
 

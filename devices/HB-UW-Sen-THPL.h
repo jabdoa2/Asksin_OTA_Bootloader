@@ -31,9 +31,6 @@
  */
 #define DEBUG                1
 
-// Enable CRC Check before application start. Requires firmware to include CRC checksum at the end.
-#define CRC_FLASH            1
-
 /*****************************************
  *        Address data section           *
  * Stored at 0x7FF0 in boot loader space *
