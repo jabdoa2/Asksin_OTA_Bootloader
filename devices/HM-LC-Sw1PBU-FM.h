@@ -21,11 +21,11 @@
 // Pin assignment for config button (without hold the config button the main programm starts immediately if CRC was correct)
 // config defines and enable lins below to use config button
 //
-#define PORT_CONFIG_BTN      PORTD											// The Port D Data Register
+#define PORT_CONFIG_BTN      PORTD												// The Port D Data Register
 #define DDR_CONFIG_BTN       DDRD												// The Port D Data Direction Register
 #define INPUT_CONFIG_BTN     PIND												// The Port D Input Pins Address
-#define PIN_CONFIG_BTN       7												// PD7 where the button sould connected (to ground)
-#define WAIT_FOR_CONFIG      10												// Wait 10 seconds after watchdog reset for press config button
+#define PIN_CONFIG_BTN       7													// PD7 where the button sould connected (to ground)
+#define WAIT_FOR_CONFIG      10													// Wait 10 seconds after watchdog reset for press config button
 
 /**
  * set to 1 to activate debug info over UART
@@ -35,10 +35,6 @@
 
 // Enable CRC Check before application start. Requires firmware to include CRC checksum at the end.
 #define CRC_FLASH            1
-
-// adress of CRC checksum if CRC check is enabled. See below. Expect a CRC16 little endian
-// is defined in makefile
-// #define CODE_LEN             0xDEED
 
 /*****************************************
  *        Address data section           *

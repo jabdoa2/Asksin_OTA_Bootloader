@@ -34,10 +34,6 @@
 // Enable CRC Check before application start. Requires firmware to include CRC checksum at the end.
 #define CRC_FLASH            1
 
-// adress of CRC checksum if CRC check is enabled. See below. Expect a CRC16 little endian
-// is defined in makefile
-// #define CODE_LEN             0x6FFE
-
 /*****************************************
  *        Address data section           *
  * Stored at 0x7FF0 in boot loader space *
