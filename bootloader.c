@@ -2,7 +2,7 @@
 #include "config.h"
 
 #if DEBUG > 0
-	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.6.2\n\n"			// version number for debug info
+	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.7.0\n\n"			// version number for debug info
 #endif
 
 #define BOOT_UART_BAUD_RATE  57600												// Baudrate for debugging
@@ -348,9 +348,9 @@ void startApplication() {
 		#endif
 
 		#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
-			// blink led 5 times indicating bootloader update
-			for (uint8_t i=0; i < 5; i++){
-				blinkLED(100, 100);
+			// blink led 10 times indicating bootloader update
+			for (uint8_t i=0; i < 10; i++){
+				blinkLED(50, 50);
 			}
 		#endif
 
@@ -605,12 +605,16 @@ ISR(TIMER0_OVF_vect) {
 }
 
 
-// the updateBootloaderFromRWW function is placed in the topmost page and cannot be changed via OTA Update
-// this must not be touched for OTA update otherwise you may brick the bootloader and need and ISP update
+/**
+ * The updateBootloaderFromRWW function is placed in the topmost page and cannot be changed via OTA Update
+ * This must not be touched for OTA update otherwise you may brick the bootloader and need and ISP update
+ */
 void updateBootloaderFromRWW(void) __attribute__ ((section (".bootloaderUpdate")));
-void updateBootloaderFromRWW(){
-	// copy bootloader image from RWW section into NRWW section (except top page with this function)
 
+/**
+ * Copy bootloader image from RWW section into NRWW section (except top page with this function)
+ */
+void updateBootloaderFromRWW(){
 	cli();																		// make shure all interrups are off
 
 	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
@@ -618,11 +622,12 @@ void updateBootloaderFromRWW(){
 	#endif
 
 	for (uint8_t i=0; i < BOOTLOADER_PAGES-1; i++){
+
 		uint32_t pageAddr = BOOTLOADER_START + (i * SPM_PAGESIZE);				// address of page to flash
 		boot_page_erase (pageAddr);												// we must erase the page before
 		boot_spm_busy_wait();													// Wait until the memory is erased.
 
-		for(uint16_t j=0; j < SPM_PAGESIZE; j=+2){
+		for(uint16_t j=0; j < SPM_PAGESIZE; j+=2){
 			boot_page_fill(pageAddr+j, pgm_read_word((i * SPM_PAGESIZE) + j));	//wordbuf=pgm_read_word((i*SPM_PAGESIZE)+j);
 		}
 
