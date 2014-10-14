@@ -18,8 +18,6 @@ const uint8_t hm_Type[2]        ADDRESS_SECTION_TYPE   = {HM_TYPE};				// 2 byte
 const uint8_t hm_serial[10]     ADDRESS_SECTION_SERIAL = {HM_SERIAL};			// 10 bytes serial number
 const uint8_t hm_id[3]          ADDRESS_SECTION_ID     = {HM_ID};				// 3 bytes device address
 
-uint8_t expectedMsgIdOffset;
-
 #if DEBUG > 1
 	void pHex(const uint8_t *buf, uint8_t len) {
 		const char hexDigits[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
@@ -429,11 +427,6 @@ void wait_for_CB_msg() {
 				uart_puts_P("Got CB message\n");
 			#endif
 
-			if (data[0] >= 17) {
-				// special for update with CCU
-				expectedMsgIdOffset = data[17];
-			}
-
 			sendResponse(data, MSG_RESPONSE_TYPE_ACK);
 			break;
 
@@ -453,8 +446,9 @@ void flash_from_rf() {
 	uint16_t blockPos  = 0;
 	uint32_t pageCount = 0;
 
+	uint8_t  previousMsgId = data[1];											// last message id
+
 	timeoutCounter = 0;
-	uint8_t expectedMsgId = data[1] + expectedMsgIdOffset + 1;
 
 	#if DEBUG > 0
 		uart_puts_P("Start receive firmware\n");
@@ -475,23 +469,16 @@ void flash_from_rf() {
 			continue;
 		}
 
-		if (data[1] != expectedMsgId) {
-			if (data[1] == expectedMsgId + 1 && pageCount > 0) {
+		// here we check if current msgId > last msgId
+		if (data[1] == previousMsgId && state == FLASH_STATE_BLOCK_NOT_STARTED) {
+			if (pageCount > 0) {
 				// The other side may have missed our ACK. It will re send the last block
-				expectedMsgId--;
 				pageCount--;
 
 				#if DEBUG > 0
 					uart_puts_P("Retransmit. We will re flash!\n");
 				#endif
-
-			} else {
-				#if DEBUG > 0
-					uart_puts_P("FATAL: Wrong msgId detected\n");
-				#endif
 			}
-
-			state = FLASH_STATE_BLOCK_NOT_STARTED;
 		}
 
 		if (state == FLASH_STATE_BLOCK_NOT_STARTED) {
@@ -523,7 +510,7 @@ void flash_from_rf() {
 			blockPos += data[0]-9;
 		}
 
-		if (data[2] == 0x20) {													// last data for current block
+		if (state == FLASH_STATE_BLOCK_STARTED && data[2] == 0x20) {			// last data for current block
 			if (blockPos != SPM_PAGESIZE) {
 				#if DEBUG > 0
 					uart_puts_P("pageSize and blockPos differ\n");
@@ -554,21 +541,10 @@ void flash_from_rf() {
 //					pHex(blockData, SPM_PAGESIZE);
 //				#endif
 
+				previousMsgId = data[1];
 				sendResponse(data, MSG_RESPONSE_TYPE_ACK);
 
 				state = FLASH_STATE_BLOCK_NOT_STARTED;
-			}
-		}
-
-		if (state == FLASH_STATE_BLOCK_NOT_STARTED) {
-			expectedMsgId = data[1] + expectedMsgIdOffset + 1;
-			
-			/**
-			 * Spechial for update with CCU
-			 * The message counter overflows at 0x80 if the CCU deliver the update
-			 */
-			if (expectedMsgIdOffset > 1 && expectedMsgId >= 0x80) {
-				expectedMsgId = expectedMsgId ^ 0x80;
 			}
 		}
 	}

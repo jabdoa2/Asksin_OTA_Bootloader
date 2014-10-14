@@ -44,7 +44,6 @@ void flash_from_rf();
 static uint16_t updcrc(uint8_t c, uint16_t crc);
 uint8_t crc_app_ok(void);
 void resetOnCRCFail();
-uint16_t crcCalc(uint8_t *buf);
 
 void updateBootloaderFromRWW();
 
