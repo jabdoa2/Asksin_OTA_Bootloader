@@ -528,7 +528,7 @@ void flashFromRF() {
 		}
 
 		// current msgId sould > previousMsgId. Exception: previousMsgId 70-80 or previousMsgId > 245
-		if ( (data[1] < previousMsgId && previousMsgId < 70) || (data[1] < previousMsgId && (previousMsgId > 80 && previousMsgId < 245)) ) {
+		if ( (data[1] < previousMsgId && previousMsgId < 0x76) || (data[1] < previousMsgId && (previousMsgId > 0x80 && previousMsgId < 0xF5)) ) {
 			#if DEBUG > 0
 				uart_puts_P("Wrong MsgId!\n");
 			#endif
