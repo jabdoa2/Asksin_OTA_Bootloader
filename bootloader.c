@@ -63,16 +63,28 @@ int main() {
 	wdt_reset();
 	wdt_disable();
 
+	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined (INPUT_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
+		bitClear(DDR_CONFIG_BTN, PIN_CONFIG_BTN);								// Set pin for config button as input
+		bitSet(PORT_CONFIG_BTN, PIN_CONFIG_BTN);								// set pullup
+		_delay_us(10);
+	#endif
+
 	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 		bitSet(DDR_STATUSLED, PIN_STATUSLED);									// Set pin for LED as output
 
 		#if SHOW_VERSION_AT_LED													// show blink sequence for bootloader version
-			blinkLED(LED_VERION_CODE_0, LED_VERION_CODE_0, VERSION_MAJOR);
-			_delay_ms(500);
-			blinkLED(LED_VERION_CODE_1, LED_VERION_CODE_1, VERSION_MINOR);
-			_delay_ms(500);
-			blinkLED(LED_VERION_CODE_0, LED_VERION_CODE_0, VERSION_PATCH);
-			_delay_ms(1000);
+			#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined (INPUT_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
+				if( bitRead(INPUT_CONFIG_BTN, PIN_CONFIG_BTN)) {					// check if button is not pressed (button must be at high level)
+			#endif
+				blinkLED(LED_VERION_CODE_0, LED_VERION_CODE_0, VERSION_MAJOR);
+				_delay_ms(500);
+				blinkLED(LED_VERION_CODE_1, LED_VERION_CODE_1, VERSION_MINOR);
+				_delay_ms(500);
+				blinkLED(LED_VERION_CODE_0, LED_VERION_CODE_0, VERSION_PATCH);
+				_delay_ms(1000);
+			#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined (INPUT_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
+				}
+			#endif
 		#else
 			blinkLED(25, 200, 1);												// Blink status led one time to show bootloader started
 		#endif
@@ -91,10 +103,6 @@ int main() {
 	#endif
 
 	#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined (INPUT_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
-		bitClear(DDR_CONFIG_BTN, PIN_CONFIG_BTN);								// Set pin for config button as input
-		bitSet(PORT_CONFIG_BTN, PIN_CONFIG_BTN);								// set pullup
-		_delay_us(10);
-
 		/**
 		 * Check if config button pressed after power on reset or a watchdog reset was triggered, then start bootloader. Else start application.
 		 */
