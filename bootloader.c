@@ -650,7 +650,7 @@ void updateBootloaderFromRWW(){
 		bitSet(PORT_STATUSLED, PIN_STATUSLED);									// Status-LED on for indicating bootloader update
 	#endif
 
-	for (uint8_t i=0; i < BOOTLOADER_PAGES-1; i++){
+	for (uint8_t i=0; i < BOOTLOADER_PAGES; i++){
 		uint32_t pageAddr = BOOTLOADER_START + (i * SPM_PAGESIZE);				// address of page to flash
 		boot_page_erase (pageAddr);												// we must erase the page before
 		boot_spm_busy_wait();													// Wait until the memory is erased.
