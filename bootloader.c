@@ -74,7 +74,7 @@ int main() {
 
 		#if SHOW_VERSION_AT_LED													// show blink sequence for bootloader version
 			#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined (INPUT_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
-				if( bitRead(INPUT_CONFIG_BTN, PIN_CONFIG_BTN)) {					// check if button is not pressed (button must be at high level)
+				if( bitRead(INPUT_CONFIG_BTN, PIN_CONFIG_BTN) && !watchdogReset) {	// check if button is not pressed (button must be at high level)
 			#endif
 				blinkLED(LED_VERION_CODE_0, LED_VERION_CODE_0, VERSION_MAJOR);
 				_delay_ms(500);
@@ -83,6 +83,8 @@ int main() {
 				blinkLED(LED_VERION_CODE_0, LED_VERION_CODE_0, VERSION_PATCH);
 				_delay_ms(1000);
 			#if defined(PORT_CONFIG_BTN) && defined(DDR_CONFIG_BTN) && defined (INPUT_CONFIG_BTN) && defined(PIN_CONFIG_BTN)
+				} else {
+					blinkLED(25, 200, 1);										// Blink status led one time to show bootloader started
 				}
 			#endif
 		#else
