@@ -116,7 +116,7 @@ echo *************************************************************************
 echo * Write bootloader, application and set lock bits with bitClock 1,5 MHz *
 echo *************************************************************************
 :: Next we flash program and set lock bits with bitClock 1,5 MHz
-bin\avrdude.exe -Cbin\avrdude.conf -c%1 -patmega328p -B0.5 -Uflash:w:%fileBasename%.bin:r -Ulock:w:0x2F:m 
+bin\avrdude.exe -Cbin\avrdude.conf -c%1 -patmega328p -B0.5 -Uflash:w:%fileBasename%.bin:r -Ulock:w:0x3F:m 
 
 ::del %fileBasename%.bin
 
