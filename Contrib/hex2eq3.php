@@ -89,7 +89,7 @@ class converter {
 
 	protected function printHelpAndExit() {
 		print ('Commandline:' . LF);
-		print ($this->thisScript . ' --inFile <infile.hex> [--outFile <outfile>] [--spmPageSize <64|128|256|512>] [--hexEndAddress <hexEndAddress>] [--outFormat <eq3|hex|bin>] [--markAsBootloaderUpdate] [--withCrcCheck --pathTo-srec_cat <pathTo-srec_cat>]' . LF);
+		print ($this->thisScript . ' --inFile <infile.hex> --outFile <outfile> --spmPageSize <64|128|256|512> [--hexEndAddress <hexEndAddress>] [--outFormat <eq3|hex|bin>] [--markAsBootloaderUpdate] [--withCrcCheck --pathTo-srec_cat <pathTo-srec_cat>]' . LF);
 		print (LF);
 
 		exit();

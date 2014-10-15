@@ -1,8 +1,17 @@
 #include "bootloader.h"
 #include "config.h"
 
+#define VERSION_MAJOR     0
+#define VERSION_MINOR     7
+#define VERSION_PATCH     0
+
+#define LED_VERION_CODE_1 150
+#define LED_VERION_CODE_0 300
+
 #if DEBUG > 0
-	#define VERSION_STRING       "\nAskSin OTA Bootloader V0.7.0\n\n"			// version number for debug info
+	#define STR(x) #x
+	#define VERSION_STRING_FUNC(v1, v2, v3)  "\nAskSin OTA Bootloader V" STR(v1) "." STR(v2) "." STR(v3) "\n\n"
+	#define VERSION_STRING VERSION_STRING_FUNC (VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH)
 #endif
 
 #define BOOT_UART_BAUD_RATE  57600												// Baudrate for debugging
@@ -56,7 +65,17 @@ int main() {
 
 	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 		bitSet(DDR_STATUSLED, PIN_STATUSLED);									// Set pin for LED as output
-		blinkLED(25, 200);														// Blink status led indicating bootloader
+
+		#if SHOW_VERSION_AT_LED													// show blink sequence for bootloader version
+			blinkLED(LED_VERION_CODE_0, LED_VERION_CODE_0, VERSION_MAJOR);
+			_delay_ms(500);
+			blinkLED(LED_VERION_CODE_1, LED_VERION_CODE_1, VERSION_MINOR);
+			_delay_ms(500);
+			blinkLED(LED_VERION_CODE_0, LED_VERION_CODE_0, VERSION_PATCH);
+			_delay_ms(1000);
+		#else
+			blinkLED(25, 200, 1);												// Blink status led one time to show bootloader started
+		#endif
 	#endif
 
 	setupInterrupts();
@@ -87,7 +106,7 @@ int main() {
 	#endif
 
 	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
-		blinkLED(25, 200);														// Blink status led again after init done
+		blinkLED(25, 200, 1);													// Blink status led again after init done
 	#endif
 
 	// we must copy the address data from program space first
@@ -298,7 +317,7 @@ void resetOnCRCFail(){
 
 	// At this point we have a CRC failure. We reboot the device
 	#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
-		blinkLED(2000, 1);													// blink led
+		blinkLED(2000, 1, 1);													// blink led
 	#endif
 
 	#if DEBUG > 0
@@ -349,9 +368,7 @@ void startApplication() {
 
 		#if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 			// blink led 10 times indicating bootloader update
-			for (uint8_t i=0; i < 10; i++){
-				blinkLED(50, 50);
-			}
+			blinkLED(50, 50, 10);
 		#endif
 
 		updateBootloaderFromRWW();
@@ -582,14 +599,16 @@ void flashFromRF() {
 // Status-LED relatedt functions
 #if defined(PORT_STATUSLED) && defined(PIN_STATUSLED) && defined(DDR_STATUSLED)
 	/*
-	 * Let the led blinks 1 time
+	 * Let the led blinks count times
 	 */
-	void blinkLED(uint16_t onTime, uint16_t offTime) {
-		bitSet(PORT_STATUSLED, PIN_STATUSLED);									// Status-LED on
-		while(onTime > 0) {_delay_ms(1); onTime--; }
+	void blinkLED(uint16_t onTime, uint16_t offTime, uint8_t count) {
+		for (uint8_t i=0; i < count; i++){
+			bitSet(PORT_STATUSLED, PIN_STATUSLED);								// Status-LED on
+			for (uint16_t j=0; j < onTime; j++) {_delay_ms(1); }
 
-		bitClear(PORT_STATUSLED, PIN_STATUSLED);								// Status-LED off
-		while(offTime > 0) {_delay_ms(1); offTime--; }
+			bitClear(PORT_STATUSLED, PIN_STATUSLED);							// Status-LED off
+			for (uint16_t j=0; j < offTime; j++) {_delay_ms(1); }
+		}
 	}
 #endif
 

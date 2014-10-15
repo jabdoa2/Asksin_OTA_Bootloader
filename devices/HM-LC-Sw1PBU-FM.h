@@ -27,6 +27,8 @@
 #define PIN_CONFIG_BTN       7													// PD7 where the button sould connected (to ground)
 #define WAIT_FOR_CONFIG      10													// Wait 10 seconds after watchdog reset for press config button
 
+#define SHOW_VERSION_AT_LED  1													// version number show with blink sequence at status led
+
 /**
  * set to 1 to activate debug info over UART
  * set to 2 blockData and blockLen for each received block was printed
