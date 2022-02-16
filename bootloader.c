@@ -357,7 +357,7 @@ void sendResponse(uint8_t *msg, uint8_t type) {
 		#endif
 	}
 
-	uint8_t responseMsg[11] = { 10, msg[1], 0x80, 0x02, hmID[0], hmID[1], hmID[2], msg[4], msg[5], msg[6], type };
+	uint8_t responseMsg[11] = { 10, msg[1], 0x00, 0x02, hmID[0], hmID[1], hmID[2], msg[4], msg[5], msg[6], type };
 	hmEncodeAndSendData(responseMsg);
 }
 
